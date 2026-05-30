@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>01-log.json - my-dream-proxy-client</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #ddd; }
+.topbar .app-name { font-weight: 600; font-size: 16px; white-space: nowrap; }
+.topbar .api-url { flex: 1; max-width: 400px; padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace; }
+.topbar .actions { display: flex; gap: 8px; }
+.topbar button { padding: 5px 14px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; background: #fff; }
+.topbar button:hover { background: #eee; }
+.btn-start { color: #2e7d32; border-color: #2e7d32 !important; }
+.btn-stop { color: #c62828; border-color: #c62828 !important; }
+.status { font-size: 13px; color: #888; white-space: nowrap; }
+
+/* Nav bar */
+.navbar { display: flex; gap: 0; background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; }
+.navbar a { padding: 10px 16px; text-decoration: none; color: #555; font-size: 14px; border-bottom: 2px solid transparent; }
+.navbar a:hover { color: #333; background: #f9f9f9; }
+.navbar a.active { color: #1976d2; border-bottom-color: #1976d2; font-weight: 500; }
+
+/* Content */
+.content { max-width: 900px; margin: 20px auto; padding: 0 20px; }
+.content h2 { font-size: 18px; margin-bottom: 12px; color: #555; }
+
+.btn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.btn-row button { padding: 6px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; background: #fff; }
+.btn-row button:hover { background: #eee; }
+.btn-primary { background: #1976d2 !important; color: #fff !important; border-color: #1976d2 !important; }
+.btn-primary:hover { background: #1565c0 !important; }
+
+.editor { width: 100%; min-height: 400px; font-family: "SF Mono", "Fira Code", "Consolas", monospace; font-size: 13px; line-height: 1.5; padding: 12px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; tab-size: 2; background: #fafafa; }
+
+.msg { padding: 8px 12px; margin-bottom: 12px; border-radius: 4px; font-size: 13px; display: none; }
+.msg-ok { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.msg-err { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">my-dream-proxy-client</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a class="active" href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a href="03-router.html">03-router</a>
+  <a href="04-inbounds.html">04-inbounds</a>
+  <a href="05-outbounds.html">05-outbounds</a>
+  <a href="06-api.html">06-api</a>
+</div>
+
+<div class="content">
+  <h2>01-log.json</h2>
+  <div class="msg" id="msg"></div>
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+  <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
+  <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+    <button class="btn-primary" onclick="saveConfig()">保存</button>
+  </div>
+</div>
+
+<script>
+// Load API URL from localStorage
+(function() {
+  const saved = localStorage.getItem("mdpc-api-url");
+  if (saved) document.getElementById("apiUrl").value = saved;
+})();
+
+function saveApiUrl() {
+  localStorage.setItem("mdpc-api-url", document.getElementById("apiUrl").value);
+  showMsg("API 地址已保存", true);
+}
+
+const FILENAME = "01-log.json";
+
+function api(path) {
+  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + path;
+}
+
+function showMsg(text, ok) {
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = "msg " + (ok ? "msg-ok" : "msg-err");
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+
+async function readConfig() {
+  try {
+    const res = await fetch(api("/api/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    document.getElementById("editor").value = data.data.content;
+    showMsg("配置已加载", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function saveConfig() {
+  const content = document.getElementById("editor").value;
+  try {
+    const res = await fetch(api("/api/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("保存成功", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function startCore() {
+  try {
+    const res = await fetch(api("/api/core/start"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("已启动", true);
+    updateStatus();
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function stopCore() {
+  try {
+    const res = await fetch(api("/api/core/stop"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("已停止", true);
+    updateStatus();
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function updateStatus() {
+  try {
+    const res = await fetch(api("/api/core/status"));
+    const data = await res.json();
+    if (data.data) {
+      document.getElementById("statusText").textContent =
+        data.data.running ? "运行中 (pid " + data.data.pid + ")" : "已停止";
+    }
+  } catch (e) {
+    document.getElementById("statusText").textContent = "无法连接";
+  }
+}
+
+updateStatus();
+</script>
+</body>
+</html>

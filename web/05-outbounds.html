@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05-outbounds.json - my-dream-proxy-client</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+
+/* Top bar */
+.topbar { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: #fff; border-bottom: 1px solid #ddd; }
+.topbar .app-name { font-weight: 600; font-size: 16px; white-space: nowrap; }
+.topbar .api-url { flex: 1; max-width: 400px; padding: 5px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace; }
+.topbar .actions { display: flex; gap: 8px; }
+.topbar button { padding: 5px 14px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; background: #fff; }
+.topbar button:hover { background: #eee; }
+.btn-start { color: #2e7d32; border-color: #2e7d32 !important; }
+.btn-stop { color: #c62828; border-color: #c62828 !important; }
+.status { font-size: 13px; color: #888; white-space: nowrap; }
+
+/* Nav bar */
+.navbar { display: flex; gap: 0; background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; }
+.navbar a { padding: 10px 16px; text-decoration: none; color: #555; font-size: 14px; border-bottom: 2px solid transparent; }
+.navbar a:hover { color: #333; background: #f9f9f9; }
+.navbar a.active { color: #1976d2; border-bottom-color: #1976d2; font-weight: 500; }
+
+/* Content */
+.content { max-width: 900px; margin: 20px auto; padding: 0 20px; }
+.content h2 { font-size: 18px; margin-bottom: 12px; color: #555; }
+
+.btn-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.btn-row button { padding: 6px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 14px; background: #fff; }
+.btn-row button:hover { background: #eee; }
+.btn-primary { background: #1976d2 !important; color: #fff !important; border-color: #1976d2 !important; }
+.btn-primary:hover { background: #1565c0 !important; }
+
+.editor { width: 100%; min-height: 300px; font-family: "SF Mono", "Fira Code", "Consolas", monospace; font-size: 13px; line-height: 1.5; padding: 12px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; tab-size: 2; background: #fafafa; }
+
+.msg { padding: 8px 12px; margin-bottom: 12px; border-radius: 4px; font-size: 13px; display: none; }
+.msg-ok { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+.msg-err { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+
+/* Collapsible sections */
+.section { margin-bottom: 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff; overflow: hidden; }
+.section-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; user-select: none; background: #fafafa; border-bottom: 1px solid #eee; font-weight: 500; font-size: 15px; }
+.section-header:hover { background: #f0f0f0; }
+.section-header .arrow { margin-right: 8px; font-size: 12px; transition: transform 0.2s; }
+.section-header .arrow.open { transform: rotate(90deg); }
+.section-body { padding: 16px; display: none; }
+.section-body.open { display: block; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px 12px; align-items: center; }
+.form-grid label { font-size: 14px; color: #555; text-align: right; }
+.form-grid input, .form-grid select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; }
+.form-grid input:focus, .form-grid select:focus { outline: none; border-color: #1976d2; }
+.form-sep { grid-column: 1 / -1; border-top: 1px solid #eee; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">my-dream-proxy-client</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a href="03-router.html">03-router</a>
+  <a href="04-inbounds.html">04-inbounds</a>
+  <a class="active" href="05-outbounds.html">05-outbounds</a>
+  <a href="06-api.html">06-api</a>
+</div>
+
+<div class="content">
+  <h2>05-outbounds.json</h2>
+  <div class="msg" id="msg"></div>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+
+  <!-- Share link section (default expanded) -->
+  <div class="section" id="linkSection">
+    <div class="section-header" onclick="toggleSection('link')">
+      <span class="arrow open" id="linkArrow">▶</span> 节点分享链接
+    </div>
+    <div class="section-body open" id="linkBody">
+      <div style="display: flex; gap: 8px;">
+        <input id="shareLink" placeholder="vless://..." style="flex:1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace;">
+        <button class="btn-primary" onclick="parseShareLink()">解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form section (default expanded) -->
+  <div class="section" id="formSection">
+    <div class="section-header" onclick="toggleSection('form')">
+      <span class="arrow open" id="formArrow">▶</span> 表单
+    </div>
+    <div class="section-body open" id="formBody">
+      <div class="form-grid">
+        <label>地址:</label>
+        <input id="f_address" placeholder="服务器地址">
+        <label>端口:</label>
+        <input id="f_port" type="number" value="443">
+        <label>UUID:</label>
+        <input id="f_uuid" placeholder="用户 ID">
+        <label>流控:</label>
+        <select id="f_flow">
+          <option value="xtls-rprx-vision">xtls-rprx-vision</option>
+          <option value="none">none</option>
+        </select>
+        <label>网络:</label>
+        <select id="f_network">
+          <option value="tcp">tcp</option>
+          <option value="grpc">grpc</option>
+          <option value="ws">ws</option>
+          <option value="http">http</option>
+          <option value="h2">h2</option>
+        </select>
+
+        <div class="form-sep"></div>
+
+        <label>SNI:</label>
+        <input id="f_sni" placeholder="服务器名称">
+        <label>指纹:</label>
+        <select id="f_fingerprint">
+          <option value="chrome">chrome</option>
+          <option value="firefox">firefox</option>
+          <option value="safari">safari</option>
+          <option value="edge">edge</option>
+          <option value="random">random</option>
+          <option value="randomized">randomized</option>
+        </select>
+        <label>公钥:</label>
+        <input id="f_publicKey" placeholder="Reality 公钥">
+        <label>短ID:</label>
+        <input id="f_shortId" placeholder="Reality 短 ID">
+        <label>SpiderX:</label>
+        <input id="f_spiderX" placeholder="(可选)">
+      </div>
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="btn-primary" onclick="formToJson()">转JSON</button>
+        <button class="btn-primary" onclick="directSave()">直接保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON section (default collapsed) -->
+  <div class="section" id="jsonSection">
+    <div class="section-header" onclick="toggleSection('json')">
+      <span class="arrow" id="jsonArrow">▶</span> JSON
+    </div>
+    <div class="section-body" id="jsonBody">
+      <textarea class="editor" id="editor" placeholder="点击「转JSON」生成，或点击「读取配置」加载..."></textarea>
+      <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="btn-primary" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Load API URL from localStorage
+(function() {
+  const saved = localStorage.getItem("mdpc-api-url");
+  if (saved) document.getElementById("apiUrl").value = saved;
+})();
+
+function saveApiUrl() {
+  localStorage.setItem("mdpc-api-url", document.getElementById("apiUrl").value);
+  showMsg("API 地址已保存", true);
+}
+
+const FILENAME = "05-outbounds.json";
+
+function api(path) {
+  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + path;
+}
+
+function showMsg(text, ok) {
+  const el = document.getElementById("msg");
+  el.textContent = text;
+  el.className = "msg " + (ok ? "msg-ok" : "msg-err");
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+
+function toggleSection(name) {
+  const body = document.getElementById(name + "Body");
+  const arrow = document.getElementById(name + "Arrow");
+  const isOpen = body.classList.contains("open");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+// --- Form <-> JSON ---
+
+function gatherForm() {
+  return {
+    address: document.getElementById("f_address").value,
+    port: parseInt(document.getElementById("f_port").value) || 443,
+    uuid: document.getElementById("f_uuid").value,
+    flow: document.getElementById("f_flow").value,
+    network: document.getElementById("f_network").value,
+    sni: document.getElementById("f_sni").value,
+    fingerprint: document.getElementById("f_fingerprint").value,
+    publicKey: document.getElementById("f_publicKey").value,
+    shortId: document.getElementById("f_shortId").value,
+    spiderX: document.getElementById("f_spiderX").value,
+  };
+}
+
+function fillForm(obj) {
+  document.getElementById("f_address").value = obj.address || "";
+  document.getElementById("f_port").value = obj.port || 443;
+  document.getElementById("f_uuid").value = obj.uuid || "";
+  document.getElementById("f_flow").value = obj.flow || "xtls-rprx-vision";
+  document.getElementById("f_network").value = obj.network || "tcp";
+  document.getElementById("f_sni").value = obj.sni || "";
+  document.getElementById("f_fingerprint").value = obj.fingerprint || "chrome";
+  document.getElementById("f_publicKey").value = obj.publicKey || "";
+  document.getElementById("f_shortId").value = obj.shortId || "";
+  document.getElementById("f_spiderX").value = obj.spiderX || "";
+}
+
+function formToJson() {
+  const f = gatherForm();
+  const config = {
+    outbounds: [
+      {
+        tag: "proxy",
+        protocol: "vless",
+        settings: {
+          vnext: [{
+            address: f.address,
+            port: f.port,
+            users: [{
+              id: f.uuid,
+              encryption: "none",
+              flow: f.flow
+            }]
+          }]
+        },
+        streamSettings: {
+          network: f.network,
+          security: "reality",
+          realitySettings: {
+            serverName: f.sni,
+            fingerprint: f.fingerprint,
+            publicKey: f.publicKey,
+            shortId: f.shortId,
+            spiderX: f.spiderX
+          }
+        }
+      },
+      {
+        tag: "direct",
+        protocol: "freedom"
+      }
+    ]
+  };
+  document.getElementById("editor").value = JSON.stringify(config, null, 2);
+  // Expand JSON section
+  const body = document.getElementById("jsonBody");
+  const arrow = document.getElementById("jsonArrow");
+  if (!body.classList.contains("open")) {
+    body.classList.add("open");
+    arrow.classList.add("open");
+  }
+  showMsg("JSON 已生成", true);
+}
+
+function parseJsonToForm(jsonStr) {
+  try {
+    const config = JSON.parse(jsonStr);
+    const out = (config.outbounds || []).find(o => o.protocol === "vless");
+    if (!out) return false;
+    const user = (out.settings?.vnext?.[0]?.users || [])[0] || {};
+    const reality = out.streamSettings?.realitySettings || {};
+    fillForm({
+      address: out.settings?.vnext?.[0]?.address || "",
+      port: out.settings?.vnext?.[0]?.port || 443,
+      uuid: user.id || "",
+      flow: user.flow || "xtls-rprx-vision",
+      network: out.streamSettings?.network || "tcp",
+      sni: reality.serverName || "",
+      fingerprint: reality.fingerprint || "chrome",
+      publicKey: reality.publicKey || "",
+      shortId: reality.shortId || "",
+      spiderX: reality.spiderX || "",
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// --- API calls ---
+
+// --- Share link parser ---
+
+function parseShareLink() {
+  const raw = document.getElementById("shareLink").value.trim();
+  if (!raw) { showMsg("请输入节点分享链接", false); return; }
+
+  try {
+    // vless://UUID@ADDRESS:PORT?params#name
+    const withoutHash = raw.split("#");
+    const remark = withoutHash.length > 1 ? decodeURIComponent(withoutHash[1]) : "";
+    const main = withoutHash[0];
+
+    // Remove prefix "vless://"
+    const body = main.replace(/^vless:\/\//, "");
+
+    // Split path and query
+    const qIdx = body.indexOf("?");
+    const path = qIdx >= 0 ? body.substring(0, qIdx) : body;
+    const query = qIdx >= 0 ? body.substring(qIdx + 1) : "";
+
+    // Parse path: UUID@ADDRESS:PORT
+    const atIdx = path.indexOf("@");
+    const uuid = path.substring(0, atIdx);
+    const hostPort = path.substring(atIdx + 1);
+    const colonIdx = hostPort.lastIndexOf(":");
+    const address = hostPort.substring(0, colonIdx);
+    const port = parseInt(hostPort.substring(colonIdx + 1)) || 443;
+
+    // Parse query params
+    const params = {};
+    query.split("&").forEach(pair => {
+      const [k, v] = pair.split("=");
+      if (k) params[decodeURIComponent(k)] = decodeURIComponent(v || "");
+    });
+
+    fillForm({
+      address,
+      port,
+      uuid,
+      flow: params.flow || "xtls-rprx-vision",
+      network: params.type || "tcp",
+      sni: params.sni || "",
+      fingerprint: params.fp || "chrome",
+      publicKey: params.pbk || "",
+      shortId: params.sid || "",
+      spiderX: params.spx || "",
+    });
+
+    showMsg("链接已解析" + (remark ? " (" + remark + ")" : ""), true);
+  } catch (e) {
+    showMsg("链接格式错误: " + e.message, false);
+  }
+}
+
+async function readConfig() {
+  try {
+    const res = await fetch(api("/api/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    const content = data.data.content;
+    document.getElementById("editor").value = content;
+    parseJsonToForm(content);
+    showMsg("配置已加载", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function saveConfig() {
+  const content = document.getElementById("editor").value;
+  try {
+    const res = await fetch(api("/api/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("保存成功", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function directSave() {
+  formToJson();
+  await saveConfig();
+}
+
+async function startCore() {
+  try {
+    const res = await fetch(api("/api/core/start"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("已启动", true);
+    updateStatus();
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function stopCore() {
+  try {
+    const res = await fetch(api("/api/core/stop"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    showMsg("已停止", true);
+    updateStatus();
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function updateStatus() {
+  try {
+    const res = await fetch(api("/api/core/status"));
+    const data = await res.json();
+    if (data.data) {
+      document.getElementById("statusText").textContent =
+        data.data.running ? "运行中 (pid " + data.data.pid + ")" : "已停止";
+    }
+  } catch (e) {
+    document.getElementById("statusText").textContent = "无法连接";
+  }
+}
+
+updateStatus();
+</script>
+</body>
+</html>
