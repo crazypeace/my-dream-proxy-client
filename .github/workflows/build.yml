@@ -1,4 +1,4 @@
-name: Build Windows x64
+name: Build
 
 on:
   push:
@@ -10,6 +10,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            suffix: .exe
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+          - goos: linux
+            goarch: arm64
+            suffix: ""
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,15 +31,15 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Build Windows x64
+      - name: Build
         env:
-          GOOS: windows
-          GOARCH: amd64
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o my-dream-proxy-client.exe .
+          go build -o my-dream-proxy-client${{ matrix.suffix }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: my-dream-proxy-client-windows-amd64
-          path: my-dream-proxy-client.exe
+          name: my-dream-proxy-client-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: my-dream-proxy-client${{ matrix.suffix }}

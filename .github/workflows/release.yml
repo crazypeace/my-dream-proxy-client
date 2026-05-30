@@ -8,8 +8,24 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            suffix: .exe
+            pkg_name: windows-amd64
+          - goos: linux
+            goarch: amd64
+            suffix: ""
+            pkg_name: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: ""
+            pkg_name: linux-arm64
+
     steps:
       - uses: actions/checkout@v4
 
@@ -18,25 +34,41 @@ jobs:
         with:
           go-version: '1.24.3'
 
-      - name: Build Windows x64
+      - name: Build
         env:
-          GOOS: windows
-          GOARCH: amd64
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o my-dream-proxy-client.exe .
+          go build -o my-dream-proxy-client${{ matrix.suffix }} .
 
-      - name: Prepare package
+      - name: Package
         run: |
           mkdir -p release/bin/xray
           mkdir -p release/web/xray
-          cp my-dream-proxy-client.exe release/
+          cp my-dream-proxy-client${{ matrix.suffix }} release/
           cp bin/xray/put_xray_bin_config_here release/bin/xray/
           cp web/xray/*.html release/web/xray/
           cd release
-          zip -r ../my-dream-proxy-client-windows-amd64.zip .
+          zip -r ../my-dream-proxy-client-${{ matrix.pkg_name }}.zip .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-dream-proxy-client-${{ matrix.pkg_name }}
+          path: my-dream-proxy-client-${{ matrix.pkg_name }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: my-dream-proxy-client-windows-amd64.zip
+          files: |
+            my-dream-proxy-client-windows-amd64/my-dream-proxy-client-windows-amd64.zip
+            my-dream-proxy-client-linux-amd64/my-dream-proxy-client-linux-amd64.zip
+            my-dream-proxy-client-linux-arm64/my-dream-proxy-client-linux-arm64.zip
           generate_release_notes: true
