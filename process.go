@@ -3,22 +3,20 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"sync"
-	"syscall"
 	"time"
 )
 
 type ProcessManager struct {
-	mu   sync.Mutex
-	cmd  *exec.Cmd
-	pid  int
+	mu  sync.Mutex
+	cmd *exec.Cmd
+	pid int
 }
 
 type Status struct {
-	Running bool   `json:"running"`
-	PID     int    `json:"pid"`
+	Running bool  `json:"running"`
+	PID     int   `json:"pid"`
 }
 
 func NewProcessManager() *ProcessManager {
@@ -51,19 +49,9 @@ func (pm *ProcessManager) Start(command string) error {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	pm.cmd = exec.Command("sh", "-c", command)
-	pm.cmd.Stdout = os.Stdout
-	pm.cmd.Stderr = os.Stderr
-	pm.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true, // Create new process group for clean kill
+	if err := platformStart(pm, command); err != nil {
+		return err
 	}
-
-	if err := pm.cmd.Start(); err != nil {
-		pm.cmd = nil
-		pm.pid = 0
-		return fmt.Errorf("start core: %w", err)
-	}
-	pm.pid = pm.cmd.Process.Pid
 
 	// Wait in background, clean up state when done
 	go func() {
@@ -93,29 +81,7 @@ func (pm *ProcessManager) Stop() error {
 
 // stopLocked does the actual stop. Caller must hold pm.mu.
 func (pm *ProcessManager) stopLocked() {
-	pid := pm.pid
-	if pid <= 0 {
-		return
-	}
-
-	// SIGTERM the process group, wait, then SIGKILL
-	syscall.Kill(-pid, syscall.SIGTERM)
-
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		if !processAlive(pid) {
-			break
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	if processAlive(pid) {
-		syscall.Kill(-pid, syscall.SIGKILL)
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	pm.cmd = nil
-	pm.pid = 0
+	platformStop(pm)
 }
 
 func (pm *ProcessManager) TestConfig(command string) (valid bool, errMsg string) {
@@ -139,9 +105,5 @@ func (pm *ProcessManager) Cleanup() {
 
 // processAlive checks if a process with the given PID exists.
 func processAlive(pid int) bool {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	return p.Signal(syscall.Signal(0)) == nil
+	return platformProcessAlive(pid)
 }
