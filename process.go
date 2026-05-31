@@ -9,10 +9,9 @@ import (
 )
 
 type ProcessManager struct {
-	mu       sync.Mutex
-	cmd      *exec.Cmd
-	pid      int
-	jobHandle uintptr // used on Windows only (process_windows.go)
+	mu  sync.Mutex
+	cmd *exec.Cmd
+	pid int
 }
 
 type Status struct {
@@ -54,11 +53,14 @@ func (pm *ProcessManager) Start(command string) error {
 		return err
 	}
 
-	// Wait in background, clean up state when done
+	// Wait in background, clean up state when done.
+	// Capture cmd reference so the goroutine only clears state
+	// if this is still the current process (not a newer restart).
+	myCmd := pm.cmd
 	go func() {
-		pm.cmd.Wait()
+		myCmd.Wait()
 		pm.mu.Lock()
-		if pm.cmd != nil && pm.cmd.Process != nil && pm.cmd.Process.Pid == pm.pid {
+		if pm.cmd == myCmd {
 			pm.cmd = nil
 			pm.pid = 0
 		}
@@ -83,6 +85,8 @@ func (pm *ProcessManager) Stop() error {
 // stopLocked does the actual stop. Caller must hold pm.mu.
 func (pm *ProcessManager) stopLocked() {
 	platformStop(pm)
+	pm.cmd = nil
+	pm.pid = 0
 }
 
 func (pm *ProcessManager) TestConfig(command string) (valid bool, errMsg string) {

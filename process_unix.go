@@ -40,7 +40,7 @@ func platformStop(pm *ProcessManager) {
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
 		if !processAlive(pid) {
-			break
+			return
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -49,9 +49,6 @@ func platformStop(pm *ProcessManager) {
 		syscall.Kill(-pid, syscall.SIGKILL)
 		time.Sleep(200 * time.Millisecond)
 	}
-
-	pm.cmd = nil
-	pm.pid = 0
 }
 
 func platformShellExec(ctx context.Context, command string) *exec.Cmd {
