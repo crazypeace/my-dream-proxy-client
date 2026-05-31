@@ -14,11 +14,9 @@ function api(path) {
 }
 
 function showMsg(text, ok) {
-  const el = document.getElementById("msg");
-  el.textContent = text;
-  el.className = "msg " + (ok ? "msg-ok" : "msg-err");
-  el.style.display = "block";
-  setTimeout(() => { el.style.display = "none"; }, 3000);
+  const bar = document.getElementById("statusBar");
+  const ts = new Date().toLocaleTimeString();
+  bar.innerHTML = "<span class='ts'>[" + ts + "]</span> <span class='" + (ok ? "ok" : "err") + "'>" + text + "</span>";
 }
 
 async function readConfig() {
