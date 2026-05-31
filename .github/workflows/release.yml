@@ -46,7 +46,7 @@ jobs:
           mkdir -p release/bin/xray
           mkdir -p release/web/xray
           cp my-dream-proxy-client${{ matrix.suffix }} release/
-          cp mdpc-config.yaml release/mdpc-config.yaml.default
+          cp mdpc-config.yaml.default release/
           cp bin/xray/put_xray_bin_config_here release/bin/xray/
           cp web/xray/*.html release/web/xray/
           cd release
