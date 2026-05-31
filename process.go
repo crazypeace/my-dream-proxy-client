@@ -9,14 +9,15 @@ import (
 )
 
 type ProcessManager struct {
-	mu  sync.Mutex
-	cmd *exec.Cmd
-	pid int
+	mu       sync.Mutex
+	cmd      *exec.Cmd
+	pid      int
+	jobHandle uintptr // used on Windows only (process_windows.go)
 }
 
 type Status struct {
-	Running bool  `json:"running"`
-	PID     int   `json:"pid"`
+	Running bool `json:"running"`
+	PID     int  `json:"pid"`
 }
 
 func NewProcessManager() *ProcessManager {
