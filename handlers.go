@@ -134,7 +134,7 @@ func handleStop(pm *ProcessManager) http.HandlerFunc {
 			writeError(w, 500, err.Error())
 			return
 		}
-		writeOK(w)
+		writeData(w, pm.Status())
 	}
 }
 

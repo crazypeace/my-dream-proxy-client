@@ -408,27 +408,46 @@ async function directSave() {
   await saveConfig();
 }
 
+let coreBusy = false;
+
+function setStatusFromData(data) {
+  if (data && data.running !== undefined) {
+    document.getElementById("statusText").textContent =
+      data.running ? "运行中 (pid " + data.pid + ")" : "已停止";
+  }
+}
+
 async function startCore() {
+  if (coreBusy) return;
+  coreBusy = true;
   try {
     const res = await fetch(api("/api/core/start"), { method: "POST" });
     const data = await res.json();
     if (data.error) { showMsg(data.error, false); return; }
+    setStatusFromData(data.data);
     showMsg("已启动", true);
-    updateStatus();
+    // Delayed confirm after restart settles
+    setTimeout(updateStatus, 1000);
   } catch (e) {
     showMsg("连接后端失败: " + e.message, false);
+  } finally {
+    coreBusy = false;
   }
 }
 
 async function stopCore() {
+  if (coreBusy) return;
+  coreBusy = true;
   try {
     const res = await fetch(api("/api/core/stop"), { method: "POST" });
     const data = await res.json();
     if (data.error) { showMsg(data.error, false); return; }
+    setStatusFromData(data.data);
     showMsg("已停止", true);
-    updateStatus();
   } catch (e) {
     showMsg("连接后端失败: " + e.message, false);
+  } finally {
+    coreBusy = false;
   }
 }
 
