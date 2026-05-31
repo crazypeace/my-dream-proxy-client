@@ -9,7 +9,7 @@ bin/xray/*
 !bin/xray/put_xray_bin_config_here
 
 # User-specific config
-mdpc-config.yaml
+*.yaml
 
 # Backup files
 *.bak
