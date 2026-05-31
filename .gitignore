@@ -2,16 +2,11 @@
 my-dream-proxy-client
 my-dream-proxy-client.exe
 
-# Xray binary and data
-bin/xray/xray
-bin/xray/*.zip
-bin/xray/geoip.dat
-bin/xray/geosite.dat
+# Everything in bin/xray/ except the placeholder
+bin/xray/*
+!bin/xray/put_xray_bin_config_here
 
-# Xray runtime config (user-specific)
-bin/xray/02-dns.json
-bin/xray/04-inbounds.json
-bin/xray/05-outbounds.json
+# User-specific config
 mdpc-config.yaml
 
 # Backup files
