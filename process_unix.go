@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,6 +52,10 @@ func platformStop(pm *ProcessManager) {
 
 	pm.cmd = nil
 	pm.pid = 0
+}
+
+func platformShellExec(ctx context.Context, command string) *exec.Cmd {
+	return exec.CommandContext(ctx, "sh", "-c", command)
 }
 
 func platformProcessAlive(pid int) bool {

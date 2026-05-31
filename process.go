@@ -88,7 +88,7 @@ func (pm *ProcessManager) TestConfig(command string) (valid bool, errMsg string)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd := platformShellExec(ctx, command)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return false, string(output)
