@@ -1,6 +1,6 @@
 listen: 127.0.0.1
 port: 18080
-files-dir: ./bin/xray/
-core-start: "./bin/xray/xray run -confdir ./bin/xray/"
-core-test: "./bin/xray/xray run -confdir ./bin/xray/ -test"
+files-dir: bin/xray/
+core-start: "bin/xray/xray run -confdir bin/xray/"
+core-test: "bin/xray/xray run -confdir bin/xray/ -test"
 log: ""
