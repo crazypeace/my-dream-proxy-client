@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 	"time"
 )
 
 func platformStart(pm *ProcessManager, command string) error {
+	command = convertPaths(command)
 	pm.cmd = exec.Command("cmd", "/c", command)
 	pm.cmd.Stdout = os.Stdout
 	pm.cmd.Stderr = os.Stderr
@@ -58,6 +60,7 @@ func platformStop(pm *ProcessManager) {
 }
 
 func platformShellExec(ctx context.Context, command string) *exec.Cmd {
+	command = convertPaths(command)
 	return exec.CommandContext(ctx, "cmd", "/c", command)
 }
 
@@ -79,4 +82,9 @@ func platformProcessAlive(pid int) bool {
 		return false
 	}
 	return exitCode == 259 // STILL_ACTIVE
+}
+
+// convertPaths converts Unix-style path separators to Windows-style.
+func convertPaths(s string) string {
+	return strings.ReplaceAll(s, "/", "\\")
 }
