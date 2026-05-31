@@ -13,3 +13,4 @@ bin/xray/*
 
 # Backup files
 *.bak
+bin/core/
