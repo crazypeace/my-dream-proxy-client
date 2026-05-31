@@ -377,6 +377,18 @@ async function readConfig() {
 
 async function saveConfig() {
   const content = document.getElementById("editor").value;
+  if (!content.trim()) {
+    // Empty content → delete the file
+    try {
+      const res = await fetch(api("/api/files/" + FILENAME), { method: "DELETE" });
+      const data = await res.json();
+      if (data.error) { showMsg(data.error, false); return; }
+      showMsg("文件已删除", true);
+    } catch (e) {
+      showMsg("连接后端失败: " + e.message, false);
+    }
+    return;
+  }
   try {
     const res = await fetch(api("/api/files/" + FILENAME), {
       method: "PUT",
