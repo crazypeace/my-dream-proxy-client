@@ -1,0 +1,18 @@
+# Compiled binaries
+my-dream-proxy-client
+my-dream-proxy-client.exe
+
+# Xray binary and data
+bin/xray/xray
+bin/xray/*.zip
+bin/xray/geoip.dat
+bin/xray/geosite.dat
+
+# Xray runtime config (user-specific)
+bin/xray/02-dns.json
+bin/xray/04-inbounds.json
+bin/xray/05-outbounds.json
+mdpc-config.yaml
+
+# Backup files
+*.bak
