@@ -12,6 +12,9 @@ import (
 )
 
 func platformStart(pm *ProcessManager, command string) error {
+	if command == "" {
+		return fmt.Errorf("empty core-start command")
+	}
 	pm.cmd = exec.Command("sh", "-c", command)
 	pm.cmd.Stdout = os.Stdout
 	pm.cmd.Stderr = os.Stderr

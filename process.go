@@ -90,6 +90,9 @@ func (pm *ProcessManager) stopLocked() {
 }
 
 func (pm *ProcessManager) TestConfig(command string) (valid bool, errMsg string) {
+	if command == "" {
+		return false, "empty core-test command"
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
