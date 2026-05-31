@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 )
@@ -131,9 +132,11 @@ func handleStart(pm *ProcessManager, cfg *Config) http.HandlerFunc {
 func handleStop(pm *ProcessManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := pm.Stop(); err != nil {
+			log.Printf("core/stop failed: %v", err)
 			writeError(w, 500, err.Error())
 			return
 		}
+		log.Println("core/stop succeeded")
 		writeData(w, pm.Status())
 	}
 }
