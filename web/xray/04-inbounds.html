@@ -69,6 +69,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   <div class="msg" id="msg"></div>
   <div class="btn-row">
     <button onclick="readConfig()">读取配置</button>
+    <button onclick="fillSuggestion()">填充建议</button>
   </div>
   <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
   <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
@@ -100,6 +101,16 @@ function showMsg(text, ok) {
   el.className = "msg " + (ok ? "msg-ok" : "msg-err");
   el.style.display = "block";
   setTimeout(() => { el.style.display = "none"; }, 3000);
+}
+
+function fillSuggestion() {
+  document.getElementById("editor").value = JSON.stringify({
+    inbounds: [
+      { listen: "127.0.0.1", port: 10808, protocol: "socks", settings: { udp: true }, tag: "socks-in" },
+      { listen: "127.0.0.1", port: 10809, protocol: "http", tag: "http-in" }
+    ]
+  }, null, 2);
+  showMsg("已填充建议内容", true);
 }
 
 async function readConfig() {
