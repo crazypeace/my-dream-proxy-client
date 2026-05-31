@@ -3,4 +3,8 @@ port: 18080
 files-dir: bin/xray/
 core-start: "bin/xray/xray run -confdir bin/xray/"
 core-test: "bin/xray/xray run -confdir bin/xray/ -test"
+# win环境需要用\\
+# files-dir: bin\\xray\\
+# core-start: "bin\\xray\\xray.exe run -confdir bin\\xray\\"
+# core-test: "bin\\xray\\xray.exe run -confdir bin\\xray\\ -test"
 log: ""
