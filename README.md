@@ -1,5 +1,11 @@
 # my-dream-proxy-client
 极简翻墙客户端(壳)
+
+# 开发故事
+
+https://zelikk.blogspot.com/2026/06/xray-reality-mdpc-my-dream-proxy-client.html
+
+
 # my-dream-proxy-client 使用手册 (配合Xray内核)
 
 ## 一、简介
