@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>config.yaml - my-dream-proxy-client (Hysteria2)</title>
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/uri-js@4.4.1/dist/es5/uri.all.min.js"></script>
+<link rel="stylesheet" href="./common.css">
+<style>
+/* Collapsible sections */
+.section { margin-bottom: 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff; overflow: hidden; }
+.section-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; user-select: none; background: #fafafa; border-bottom: 1px solid #eee; font-weight: 500; font-size: 15px; }
+.section-header:hover { background: #f0f0f0; }
+.section-header .arrow { margin-right: 8px; font-size: 12px; transition: transform 0.2s; }
+.section-header .arrow.open { transform: rotate(90deg); }
+.section-body { padding: 16px; display: none; }
+.section-body.open { display: block; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px 12px; align-items: center; }
+.form-grid label { font-size: 14px; color: #555; text-align: right; }
+.form-grid input, .form-grid select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; }
+.form-grid input:focus, .form-grid select:focus { outline: none; border-color: #1976d2; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">MDPC - Hysteria2</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18180">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>config.yaml</h2>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+
+  <!-- URI parser -->
+  <div class="section" id="uriSection">
+    <div class="section-header" onclick="toggleSection('uri')">
+      <span class="arrow open" id="uriArrow">▶</span> 节点链接解析
+    </div>
+    <div class="section-body open" id="uriBody">
+      <div style="display: flex; gap: 8px;">
+        <input id="shareLink" placeholder="hysteria2:// 或 hy2:// 链接" style="flex:1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace;">
+        <button class="btn-primary" onclick="parseShareLink()">解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form section -->
+  <div class="section" id="formSection">
+    <div class="section-header" onclick="toggleSection('form')">
+      <span class="arrow open" id="formArrow">▶</span> 表单
+    </div>
+    <div class="section-body open" id="formBody">
+      <div class="form-grid">
+        <label>地址:</label>
+        <input id="f_host" placeholder="节点 IP 或域名">
+        <label>端口:</label>
+        <input id="f_port" type="number" value="443">
+        <label>密码:</label>
+        <input id="f_auth" placeholder="认证密码">
+        <label>证书指纹:</label>
+        <input id="f_pinSHA256" placeholder="pinSHA256（可选）">
+        <label>SOCKS 端口:</label>
+        <input id="f_socksPort" type="number" value="10808">
+        <label>HTTP 端口:</label>
+        <input id="f_httpPort" type="number" value="10809">
+      </div>
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="btn-primary" onclick="formToYaml()">转YAML</button>
+        <button class="btn-primary" onclick="directSave()">直接保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- YAML section (collapsed) -->
+  <div class="section" id="yamlSection">
+    <div class="section-header" onclick="toggleSection('yaml')">
+      <span class="arrow" id="yamlArrow">▶</span> YAML
+    </div>
+    <div class="section-body" id="yamlBody">
+      <textarea class="editor" id="editor" placeholder="点击「转YAML」生成，或点击「读取配置」加载..."></textarea>
+      <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="btn-primary" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>const FILENAME = "config.yaml";</script>
+<script src="./common.js"></script>
+<script>
+function toggleSection(name) {
+  const body = document.getElementById(name + "Body");
+  const arrow = document.getElementById(name + "Arrow");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+// --- Base64 -> Hex fingerprint conversion ---
+// Hysteria2 pinSHA256 uses hex, but some tools output base64
+
+function base64ToHex(b64) {
+  const bytes = atob(b64);
+  return Array.from(bytes).map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join("");
+}
+
+function convertFingerprint() {
+  const el = document.getElementById("f_pinSHA256");
+  const val = el.value.trim();
+  if (/^[A-Za-z0-9+/]{43}=$/.test(val)) {
+    el.value = base64ToHex(val);
+    showMsg("已将 base64 指纹转为 hex", true);
+  }
+}
+
+document.getElementById("f_pinSHA256").addEventListener("input", convertFingerprint);
+
+// --- Form <-> YAML ---
+
+function gatherForm() {
+  return {
+    host: document.getElementById("f_host").value.trim(),
+    port: document.getElementById("f_port").value.trim() || "443",
+    auth: document.getElementById("f_auth").value.trim(),
+    pinSHA256: document.getElementById("f_pinSHA256").value.trim(),
+    socksPort: document.getElementById("f_socksPort").value.trim() || "10808",
+    httpPort: document.getElementById("f_httpPort").value.trim() || "10809",
+  };
+}
+
+function fillForm(obj) {
+  document.getElementById("f_host").value = obj.host || "";
+  document.getElementById("f_port").value = obj.port || "443";
+  document.getElementById("f_auth").value = obj.auth || "";
+  document.getElementById("f_pinSHA256").value = obj.pinSHA256 || "";
+  document.getElementById("f_socksPort").value = obj.socksPort || "10808";
+  document.getElementById("f_httpPort").value = obj.httpPort || "10809";
+}
+
+function formToYaml() {
+  const f = gatherForm();
+  let yaml = "";
+  yaml += "server: " + f.host + ":" + f.port + "\n";
+  yaml += "\n";
+  yaml += "auth: " + f.auth + "\n";
+  yaml += "\n";
+  yaml += "tls:\n";
+  yaml += "  insecure: true\n";
+  if (f.pinSHA256) yaml += "  pinSHA256: " + f.pinSHA256 + "\n";
+  yaml += "\n";
+  yaml += "socks5:\n";
+  yaml += "  listen: 127.0.0.1:" + f.socksPort + "\n";
+  yaml += "\n";
+  yaml += "http:\n";
+  yaml += "  listen: 127.0.0.1:" + f.httpPort + "\n";
+
+  document.getElementById("editor").value = yaml;
+  // Expand YAML section
+  const body = document.getElementById("yamlBody");
+  const arrow = document.getElementById("yamlArrow");
+  if (!body.classList.contains("open")) {
+    body.classList.add("open");
+    arrow.classList.add("open");
+  }
+  showMsg("YAML 已生成", true);
+}
+
+// Parse YAML back into form using js-yaml
+function parseYamlToForm(yamlStr) {
+  try {
+    const config = jsyaml.load(yamlStr);
+    if (!config || typeof config !== "object") return false;
+
+    // server: "host:port" → split into host and port
+    let host = "", port = "443";
+    if (config.server) {
+      const sp = String(config.server);
+      const colonIdx = sp.lastIndexOf(":");
+      if (colonIdx > 0) {
+        host = sp.substring(0, colonIdx);
+        port = sp.substring(colonIdx + 1);
+      } else {
+        host = sp;
+      }
+    }
+
+    // socks5.listen: "127.0.0.1:10808" → extract port
+    let socksPort = "10808";
+    if (config.socks5 && config.socks5.listen) {
+      const m = String(config.socks5.listen).match(/:(\d+)$/);
+      if (m) socksPort = m[1];
+    }
+
+    // http.listen: "127.0.0.1:10809" → extract port
+    let httpPort = "10809";
+    if (config.http && config.http.listen) {
+      const m = String(config.http.listen).match(/:(\d+)$/);
+      if (m) httpPort = m[1];
+    }
+
+    fillForm({
+      host: host,
+      port: port,
+      auth: config.auth ? String(config.auth) : "",
+      pinSHA256: (config.tls && config.tls.pinSHA256) ? String(config.tls.pinSHA256) : "",
+      socksPort: socksPort,
+      httpPort: httpPort,
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// --- URI parser ---
+
+function parseShareLink() {
+  const raw = document.getElementById("shareLink").value.trim();
+  if (!raw) { showMsg("请输入节点链接", false); return; }
+
+  try {
+    // Normalize prefix: hy2:// → hysteria2://
+    let uri = raw;
+    if (uri.startsWith("hy2://")) uri = "hysteria2://" + uri.substring(6);
+    if (!uri.startsWith("hysteria2://")) {
+      showMsg("链接格式错误: 需要 hysteria2:// 或 hy2:// 前缀", false);
+      return;
+    }
+
+    const parts = URI.parse(uri);
+    if (parts.errors && parts.errors.length) {
+      showMsg("链接解析错误: " + parts.errors.join(", "), false);
+      return;
+    }
+
+    const password = parts.userinfo ? decodeURIComponent(parts.userinfo) : "";
+    const host = parts.host || "";
+    const port = parts.port ? String(parts.port) : "443";
+    const remark = parts.fragment ? decodeURIComponent(parts.fragment) : "";
+
+    // Parse query params
+    const params = {};
+    if (parts.query) {
+      parts.query.split("&").forEach(pair => {
+        const eqIdx = pair.indexOf("=");
+        if (eqIdx >= 0) {
+          params[decodeURIComponent(pair.substring(0, eqIdx))] = decodeURIComponent(pair.substring(eqIdx + 1));
+        } else if (pair) {
+          params[decodeURIComponent(pair)] = "";
+        }
+      });
+    }
+
+    // Fill form (preserve socks/http port)
+    fillForm({
+      host: host,
+      port: port,
+      auth: password,
+      pinSHA256: params.pinSHA256 || params["pin-sha256"] || "",
+      socksPort: document.getElementById("f_socksPort").value || "10808",
+      httpPort: document.getElementById("f_httpPort").value || "10809",
+    });
+    convertFingerprint();
+
+    showMsg("链接已解析" + (remark ? " (" + remark + ")" : ""), true);
+  } catch (e) {
+    showMsg("链接解析失败: " + e.message, false);
+  }
+}
+
+// --- Override readConfig to also fill form ---
+
+async function readConfig() {
+  try {
+    const res = await fetch(api("/api/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    const content = data.data.content;
+    document.getElementById("editor").value = content;
+    parseYamlToForm(content);
+    convertFingerprint();
+    showMsg("配置已加载", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function directSave() {
+  formToYaml();
+  await saveConfig();
+}
+</script>
+</body>
+</html>

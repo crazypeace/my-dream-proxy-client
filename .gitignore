@@ -8,6 +8,10 @@ mdpc.exe
 bin/xray/*
 !bin/xray/put_xray_bin_config_here
 
+# Everything in bin/hy2/ except the placeholder
+bin/hy2/*
+!bin/hy2/put_hy2_bin_config_here
+
 # User-specific config
 *.yaml
 
