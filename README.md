@@ -5,9 +5,11 @@
 
 https://zelikk.blogspot.com/2026/06/xray-reality-mdpc-my-dream-proxy-client.html
 
-
 # my-dream-proxy-client 使用手册 (配合Xray内核)
 
+<details >
+    <summary>点击展开</summary>
+  
 ## 一、简介
 
 **my-dream-proxy-client** (下简称MDPC) 是一个极简翻墙客户端(壳)，用 Go 编写的后端提供API服务, 基于HTML文件的Web 管理界面，用于管理 Xray-core 代理核心的配置文件和进程。
@@ -175,3 +177,177 @@ Server starting on 127.0.0.1:18080
 默认inbounds是开启代理：
    - **SOCKS 代理：** `127.0.0.1:10808`
    - **HTTP 代理：** `127.0.0.1:10809`
+
+</details>
+
+# my-dream-proxy-client 使用手册 (配合Hysteria内核)
+
+<details>
+    <summary>点击展开</summary>
+
+## 1. 下载
+
+前往 [GitHub Releases](https://github.com/crazypeace/my-dream-proxy-client/releases) 页面，根据你的系统下载对应的 zip 包：
+
+- `my-dream-proxy-client-windows-amd64.zip` — Windows 64位
+- `my-dream-proxy-client-linux-amd64.zip` — Linux x86_64
+- `my-dream-proxy-client-linux-arm64.zip` — Linux ARM64
+
+## 2. 解压
+
+将 zip 包解压到任意目录，例如：
+
+```bash
+unzip my-dream-proxy-client-linux-arm64.zip -d ~/mdpc
+cd ~/mdpc
+```
+
+解压后应包含：
+
+```
+my-dream-proxy-client          # 主程序
+mdpc-config-hy2.yaml.default   # 配置文件模板
+web     
+└── hy2                        # Hysteria 配置页面
+    ├── common.css
+    ├── common.js
+    └── config.html
+
+bin
+└── hy2                       # Hysteria 内核目录
+    └── put_hy2_bin_config_here
+```
+
+## 3. 下载 Hysteria 翻墙内核
+
+前往 [Hysteria Releases](https://github.com/apernet/hysteria/releases) 下载对应平台的 Hysteria 二进制文件。
+
+将 `hysteria`（Linux）或 `hysteria.exe`（Windows）放到 `bin/hy2/` 目录下
+
+## 4 创建 MDPC 配置文件
+```bash
+cp mdpc-config-hy2.yaml.default mdpc-config.yaml
+```
+
+用文本编辑器打开 mdpc-config.yaml，内容如下：
+
+```yaml
+listen: "127.0.0.1"
+port: "18180"
+files-dir: "./bin/hy2/"
+core-start: "bin/hy2/hysteria client -c bin/hy2/config.yaml"
+core-test: ""
+log: ""
+```
+
+字段说明：
+
+- listen — 监听地址。127.0.0.1 仅本机访问；0.0.0.0 允许局域网/公网访问
+- port — API 服务端口
+- files-dir — Hysteria 配置文件存放目录，对应 bin/hy2/
+- core-start — 启动 Hysteria 的命令，使用 hysteria client 模式加载 config.yaml
+- core-test — Hysteria 没有检查配置文件是否合法的命令，留空
+- log — MDPC 日志文件路径，留空则输出到终端
+
+## 5. 启动 MDPC 后端
+
+在解压目录下执行：
+
+```bash
+./my-dream-proxy-client
+```
+
+看到以下输出表示启动成功：
+
+```
+my-dream-proxy-client listening on 127.0.0.1:18180
+```
+
+> 18180 是 MDPC 的 API 管理端口，MDPC前端页面通过该端口与MDPC后端通信。保持此终端窗口开启，或使用 `nohup` / `systemd` 托管进程。
+
+## 6. 打开 MDPC 前端配置页面
+
+
+可以使用浏览器直接打开HTML文件 `file:///config.html`
+
+也可以启动一个本地的HTTP服务, 如 `python -m http.server 8000` 再用浏览器访问 `http://127.0.0.1:8000/config.html`
+
+<img  alt="image" src="https://github.com/user-attachments/assets/d52f54b9-6d6e-4d7f-a9b2-982f50b2223c" />
+
+
+页面顶部显示 API 地址，确认是 `http://127.0.0.1:18180`。
+
+右侧状态区显示 **"已停止"** 或 **"运行中 (pid xxxx)"**。
+
+## 7. 配置 Hysteria2 节点
+
+> 本项目只是为了简单演示基本原理， 所以只支持自签证书的 Hysteria2 节点
+
+有两种方式填写节点信息：
+
+### 方式 A：粘贴节点链接（推荐）
+
+如果你的代理服务商提供了 `hysteria2://` 或 `hy2://` 分享链接：
+
+1. 将完整链接粘贴到 **"节点链接解析"** 输入框。
+2. 点击 **"解析"**。
+3. 表单会自动填充：地址、端口、密码、证书指纹。
+
+### 方式 B：手动填写
+
+1. 展开 **"表单"** 区块。
+2. 填写以下字段：
+
+| 字段 | 说明 |
+|------|------|
+| 地址 | 节点服务器 IP 或域名 |
+| 端口 | 服务器端口，默认 443 |
+| 密码 | Hysteria2 认证密码 |
+| 证书指纹 | TLS 证书的 `pinSHA256`，可选 |
+| SOCKS 端口 | 本地 SOCKS5 监听端口，默认 10808 |
+| HTTP 端口 | 本地 HTTP 监听端口，默认 10809 |
+
+
+**关于证书指纹：**
+- 页面中 `pinSHA256` 使用 **hex 格式**（64 位十六进制字符）。
+- 部分工具输出的指纹是 **base64 格式**，可直接粘贴到表单，页面会自动转换为 hex。
+
+## 8. 保存配置
+
+填写完成后，点击 **"直接保存"**。
+
+该操作会：
+1. 将表单内容生成为 YAML 配置文件。
+2. 写入 `bin/hy2/config.yaml`。
+3. 控制台提示 **"保存成功"**。
+
+你也可以点击 **"转YAML"** 先预览生成的配置内容，确认无误后再点 **"直接保存"**。
+
+## 9. 启动 / 停止
+
+- 点击 **"▶ 启动"** → Hysteria 内核进程启动，页面状态切换为 **"运行中"**。
+- 点击 **"■ 停止"** → 内核进程终止，状态切换为 **"已停止"**。
+
+启动后，本地代理服务已就绪：
+
+- **SOCKS5 代理**：`127.0.0.1:10808`
+- **HTTP 代理**：`127.0.0.1:10809`
+
+在系统或浏览器中配置代理指向上述地址即可使用。
+
+## 10. 读取已有配置
+
+如需修改已保存的配置，点击 **"读取配置"**，页面会从 `bin/hy2/config.yaml` 加载当前配置并填入表单。
+
+---
+
+**端口一览：**
+
+| 端口 | 用途 |
+|------|------|
+| 18180 | 主程序管理 API（不要占用） |
+| 10808 | Hysteria2 SOCKS5 本地代理 |
+| 10809 | Hysteria2 HTTP 本地代理 |
+
+
+</details>
