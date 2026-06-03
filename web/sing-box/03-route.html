@@ -72,20 +72,16 @@ const PRESET_BLACKLIST = {
     ],
     "rule_set": [
       {
-        "type": "remote",
+        "type": "local",
         "tag": "geosite-geolocation-!cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-geolocation-!cn.srs",
-        "http_client": {"detour": "proxy"},
-        "update_interval": "1d"
+        "path": "geosite-geolocation-!cn.srs"
       },
       {
-        "type": "remote",
+        "type": "local",
         "tag": "geosite-cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": {"detour": "proxy"},
-        "update_interval": "1d"
+        "path": "geosite-cn.srs"
       }
     ],
     "final": "direct"
@@ -112,20 +108,16 @@ const PRESET_WHITELIST = {
     ],
     "rule_set": [
       {
-        "type": "remote",
+        "type": "local",
         "tag": "geosite-cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": {"detour": "proxy"},
-        "update_interval": "1d"
+        "path": "geosite-cn.srs"
       },
       {
-        "type": "remote",
+        "type": "local",
         "tag": "geoip-cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-cn.srs",
-        "http_client": {"detour": "proxy"},
-        "update_interval": "1d"
+        "path": "geoip-cn.srs"
       }
     ],
     "final": "proxy"
