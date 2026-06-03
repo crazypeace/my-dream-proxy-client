@@ -73,19 +73,9 @@ const SUGGESTION_DATA = {
     ],
     "rules": [
       {
-        "rule_set": ["geosite-cn"],
+        "domain": ["geosite:cn"],
         "action": "route",
         "server": "system"
-      }
-    ],
-    "rule_set": [
-      {
-        "type": "remote",
-        "tag": "geosite-cn",
-        "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": "proxy",
-        "update_interval": "1d"
       }
     ],
     "final": "google"

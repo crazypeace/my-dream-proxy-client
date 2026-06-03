@@ -63,31 +63,28 @@ const FILENAME = "03-route.json";
 // GFW 黑名单：默认 direct，被墙站点 → proxy
 const PRESET_BLACKLIST = {
   "route": {
+    "default_domain_resolver": "system",
     "rules": [
       {
-        "rule_set": ["geosite-!cn"],
-        "outbound": "proxy"
-      },
-      {
-        "rule_set": ["geoip-!cn"],
+        "rule_set": ["geosite-geolocation-!cn"],
         "outbound": "proxy"
       }
     ],
     "rule_set": [
       {
         "type": "remote",
-        "tag": "geosite-!cn",
+        "tag": "geosite-geolocation-!cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-!cn.srs",
-        "http_client": "proxy",
+        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-geolocation-!cn.srs",
+        "download_detour": "proxy",
         "update_interval": "1d"
       },
       {
         "type": "remote",
-        "tag": "geoip-!cn",
+        "tag": "geosite-cn",
         "format": "binary",
-        "url": "https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-!cn.srs",
-        "http_client": "proxy",
+        "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
+        "download_detour": "proxy",
         "update_interval": "1d"
       }
     ],
@@ -98,6 +95,7 @@ const PRESET_BLACKLIST = {
 // GFW 白名单 / 国内直连：默认 proxy，国内站点 → direct
 const PRESET_WHITELIST = {
   "route": {
+    "default_domain_resolver": "system",
     "rules": [
       {
         "ip_is_private": true,
@@ -118,7 +116,7 @@ const PRESET_WHITELIST = {
         "tag": "geosite-cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": "proxy",
+        "download_detour": "proxy",
         "update_interval": "1d"
       },
       {
@@ -126,7 +124,7 @@ const PRESET_WHITELIST = {
         "tag": "geoip-cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-cn.srs",
-        "http_client": "proxy",
+        "download_detour": "proxy",
         "update_interval": "1d"
       }
     ],
