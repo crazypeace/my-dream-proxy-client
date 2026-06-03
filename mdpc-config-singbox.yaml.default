@@ -1,0 +1,6 @@
+listen: "127.0.0.1"
+port: "18280"
+files-dir: "./bin/sing-box/"
+core-start: "bin/sing-box/sing-box run -C bin/sing-box/"
+core-test: "bin/sing-box/sing-box check -C bin/sing-box/"
+log: ""

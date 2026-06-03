@@ -12,6 +12,10 @@ bin/xray/*
 bin/hy2/*
 !bin/hy2/put_hy2_bin_config_here
 
+# Everything in bin/sing-box/ except the placeholder
+bin/sing-box/*
+!bin/sing-box/put_sing-box_bin_config_here
+
 # User-specific config
 *.yaml
 

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05-outbounds.json - sing-box</title>
+<link rel="stylesheet" href="./common.css">
+<style>
+  .outbound-form { margin: 16px 0; padding: 16px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; }
+  .form-row { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .form-row label { min-width: 80px; font-size: 13px; font-weight: 500; }
+  .form-row input[type="text"], .form-row input[type="number"] { flex: 1; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  .form-row input[type="checkbox"] { margin: 0; }
+  .outbound-list { margin: 12px 0; padding: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 150px; overflow-y: auto; }
+  .outbound-item { padding: 6px 8px; cursor: pointer; border-radius: 3px; font-size: 13px; }
+  .outbound-item:hover { background: #e3f2fd; }
+  .outbound-item.active { background: #bbdefb; font-weight: 500; }
+  .form-actions { display: flex; gap: 8px; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">sing-box</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18280">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a href="03-route.html">03-route</a>
+  <a href="04-inbounds.html">04-inbounds</a>
+  <a href="05-outbounds.html" class="active">05-outbounds</a>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>05-outbounds.json</h2>
+
+  <!-- AnyTLS URI 解析器 -->
+  <details style="margin-bottom: 16px;">
+    <summary style="cursor:pointer;font-weight:600;color:#1976d2;">🔗 AnyTLS 分享链接解析</summary>
+    <div style="margin-top:8px;padding:12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;">
+      <p style="font-size:13px;color:#666;margin-bottom:8px;">粘贴 anytls:// 链接（每行一个），点击解析自动生成配置</p>
+      <textarea id="uriInput" style="width:100%;height:80px;font-family:monospace;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px;resize:vertical;" placeholder="anytls://password@server:port?allowInsecure=1#name"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button onclick="parseUri()">解析并添加</button>
+        <button onclick="document.getElementById('uriInput').value='';showMsg('已清空',true);">清空</button>
+      </div>
+    </div>
+  </details>
+
+  <!-- Outbound 列表 -->
+  <div style="margin-bottom: 12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:13px;font-weight:500;">Outbound 列表</span>
+      <div style="display:flex;gap:8px;">
+        <button onclick="syncOutboundsFromJson()" style="font-size:12px;">与JSON同步</button>
+        <button onclick="addOutbound()" style="font-size:12px;">+ 添加</button>
+        <button onclick="removeOutbound()" style="font-size:12px;color:#d32f2f;">- 删除</button>
+      </div>
+    </div>
+    <div class="outbound-list" id="outboundList">
+      <div style="font-size:12px;color:#999;">暂无 outbound，点击「添加」或「解析」URI</div>
+    </div>
+  </div>
+
+  <!-- 表单编辑器 -->
+  <div class="outbound-form" id="outboundForm">
+    <div class="form-row">
+      <label>Tag</label>
+      <input type="text" id="formTag" placeholder="outbound-1" oninput="syncFormToJson()">
+    </div>
+    <div class="form-row">
+      <label>Server</label>
+      <input type="text" id="formServer" placeholder="192.168.1.1" oninput="syncFormToJson()">
+    </div>
+    <div class="form-row">
+      <label>Port</label>
+      <input type="number" id="formPort" placeholder="443" min="1" max="65535" oninput="syncFormToJson()">
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="text" id="formPassword" placeholder="password" oninput="syncFormToJson()">
+    </div>
+    <div class="form-row">
+      <label>Skip TLS</label>
+      <input type="checkbox" id="formInsecure" onchange="syncFormToJson()">
+      <span style="font-size:12px;color:#666;">跳过证书验证</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+  <textarea class="editor" id="editor" placeholder='点击「读取配置」加载内容，粘贴链接后点「解析」，或直接编辑 JSON...'></textarea>
+  <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+    <button class="btn-primary" onclick="saveConfig()">保存</button>
+  </div>
+</div>
+
+<script>
+const FILENAME = "05-outbounds.json";
+let currentOutbounds = [];
+let selectedOutboundIndex = -1;
+let prevEmpty = true;
+
+// 空列表→有元素时，首个 tag 强制为 proxy，末尾追加 direct
+function ensureDirectOutbound() {
+  if (prevEmpty && currentOutbounds.length > 0) {
+    currentOutbounds[0].tag = "proxy";
+    if (!currentOutbounds.some(ob => ob.type === 'direct')) {
+      currentOutbounds.push({ type: 'direct', tag: 'direct' });
+    }
+  }
+  prevEmpty = currentOutbounds.length === 0;
+}
+
+// 解析 URI
+function parseUri() {
+  const input = document.getElementById("uriInput").value.trim();
+  if (!input) { showMsg("请输入 anytls:// 链接", false); return; }
+
+  const lines = input.split("\n").map(l => l.trim()).filter(l => l.startsWith("anytls://"));
+  if (lines.length === 0) { showMsg("未找到有效的 anytls:// 链接", false); return; }
+
+  const newOutbounds = [];
+  for (let i = 0; i < lines.length; i++) {
+    try {
+      const ob = parseSingleUri(lines[i], currentOutbounds.length + i + 1);
+      newOutbounds.push(ob);
+    } catch (e) {
+      showMsg("第 " + (i + 1) + " 条链接解析失败: " + e.message, false);
+      return;
+    }
+  }
+
+  // 追加到现有列表
+  currentOutbounds = currentOutbounds.concat(newOutbounds);
+  ensureDirectOutbound();
+  selectedOutboundIndex = currentOutbounds.length - newOutbounds.length;
+  renderOutboundList();
+  updateFormFromOutbound();
+  syncJsonFromOutbounds();
+  showMsg("已添加 " + newOutbounds.length + " 条 outbound", true);
+}
+
+function parseSingleUri(uri, index) {
+  const regex = /^anytls:\/\/([^@]+)@([^:?#]+):(\d+)(?:\?([^#]*))?(?:#(.*))?$/;
+  const m = uri.match(regex);
+  if (!m) throw new Error("URI 格式不正确");
+
+  const password = m[1];
+  const server = m[2];
+  const port = parseInt(m[3]);
+  const params = m[4] || "";
+  const name = m[5] ? decodeURIComponent(m[5]) : ("anytls-out-" + index);
+
+  let insecure = false;
+  if (params) {
+    const pairs = params.split("&");
+    for (const pair of pairs) {
+      const [k, v] = pair.split("=");
+      if (k === "allowInsecure" && v === "1") insecure = true;
+    }
+  }
+
+  const ob = {
+    type: "anytls",
+    tag: name,
+    server: server,
+    server_port: port,
+    password: password,
+    tls: {
+      enabled: true,
+      server_name: server
+    }
+  };
+
+  if (insecure) ob.tls.insecure = true;
+
+  return ob;
+}
+
+// 渲染 outbound 列表
+function renderOutboundList() {
+  const list = document.getElementById("outboundList");
+  if (currentOutbounds.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:#999;">暂无 outbound，点击「添加」或「解析」URI</div>';
+    return;
+  }
+
+  list.innerHTML = currentOutbounds.map((ob, i) => 
+    '<div class="outbound-item ' + (i === selectedOutboundIndex ? 'active' : '') + '" onclick="selectOutbound(' + i + ')">' +
+      '<strong>' + (ob.tag || 'outbound-' + (i+1)) + '</strong>' +
+      ' <span style="color:#666;font-size:12px;">(' + ob.server + ':' + ob.server_port + ')</span>' +
+    '</div>'
+  ).join('');
+}
+
+// 选择 outbound
+function selectOutbound(index) {
+  selectedOutboundIndex = index;
+  renderOutboundList();
+  updateFormFromOutbound();
+}
+
+// 添加 outbound
+function addOutbound() {
+  const newOb = {
+    type: "anytls",
+    tag: "new-outbound-" + (currentOutbounds.length + 1),
+    server: "",
+    server_port: 443,
+    password: "",
+    tls: {
+      enabled: true,
+      server_name: ""
+    }
+  };
+  currentOutbounds.push(newOb);
+  ensureDirectOutbound();
+  selectedOutboundIndex = currentOutbounds.length - 1;
+  renderOutboundList();
+  updateFormFromOutbound();
+  syncJsonFromOutbounds();
+  showMsg("已添加新 outbound", true);
+}
+
+// 删除 outbound
+function removeOutbound() {
+  if (currentOutbounds.length === 0) { showMsg("没有可删除的 outbound", false); return; }
+  if (selectedOutboundIndex < 0) { showMsg("请先选择要删除的 outbound", false); return; }
+  
+  currentOutbounds.splice(selectedOutboundIndex, 1);
+  if (selectedOutboundIndex >= currentOutbounds.length) {
+    selectedOutboundIndex = currentOutbounds.length - 1;
+  }
+  prevEmpty = currentOutbounds.length === 0;
+  renderOutboundList();
+  updateFormFromOutbound();
+  syncJsonFromOutbounds();
+  showMsg("已删除 outbound", true);
+}
+
+// 从 outbound 更新表单
+function updateFormFromOutbound() {
+  if (selectedOutboundIndex < 0 || selectedOutboundIndex >= currentOutbounds.length) {
+    document.getElementById("formTag").value = "";
+    document.getElementById("formServer").value = "";
+    document.getElementById("formPort").value = "";
+    document.getElementById("formPassword").value = "";
+    document.getElementById("formInsecure").checked = false;
+    return;
+  }
+
+  const ob = currentOutbounds[selectedOutboundIndex];
+  document.getElementById("formTag").value = ob.tag || "";
+  document.getElementById("formServer").value = ob.server || "";
+  document.getElementById("formPort").value = ob.server_port || "";
+  document.getElementById("formPassword").value = ob.password || "";
+  document.getElementById("formInsecure").checked = ob.tls && ob.tls.insecure || false;
+}
+
+// 从表单同步到 outbound
+function syncFormToJson() {
+  if (selectedOutboundIndex < 0 || selectedOutboundIndex >= currentOutbounds.length) return;
+
+  const ob = currentOutbounds[selectedOutboundIndex];
+  ob.tag = document.getElementById("formTag").value || "outbound-" + (selectedOutboundIndex + 1);
+  ob.server = document.getElementById("formServer").value;
+  ob.server_port = parseInt(document.getElementById("formPort").value) || 443;
+  ob.password = document.getElementById("formPassword").value;
+  
+  if (!ob.tls) ob.tls = { enabled: true };
+  ob.tls.server_name = ob.server;
+  ob.tls.insecure = document.getElementById("formInsecure").checked || undefined;
+
+  renderOutboundList();
+  syncJsonFromOutbounds();
+}
+
+// 从 outbounds 同步到 JSON 编辑器
+function syncJsonFromOutbounds() {
+  const config = { outbounds: currentOutbounds };
+  document.getElementById("editor").value = JSON.stringify(config, null, 2);
+}
+
+// 从 JSON 编辑器同步到 outbounds
+function syncOutboundsFromJson() {
+  try {
+    const content = document.getElementById("editor").value.trim();
+    if (!content) {
+      currentOutbounds = [];
+      selectedOutboundIndex = -1;
+      renderOutboundList();
+      updateFormFromOutbound();
+      return;
+    }
+    const config = JSON.parse(content);
+    if (config.outbounds && Array.isArray(config.outbounds)) {
+      currentOutbounds = config.outbounds;
+      prevEmpty = currentOutbounds.length === 0;
+      if (selectedOutboundIndex >= currentOutbounds.length) {
+        selectedOutboundIndex = currentOutbounds.length - 1;
+      }
+      if (selectedOutboundIndex < 0 && currentOutbounds.length > 0) {
+        selectedOutboundIndex = 0;
+      }
+      renderOutboundList();
+      updateFormFromOutbound();
+    }
+  } catch (e) {
+    // JSON 解析失败，不更新
+  }
+}
+
+// 监听编辑器变化
+document.addEventListener("DOMContentLoaded", function() {
+  const editor = document.getElementById("editor");
+  editor.addEventListener("input", function() {
+    syncOutboundsFromJson();
+  });
+});
+</script>
+<script src="./common.js"></script>
+</body>
+</html>
