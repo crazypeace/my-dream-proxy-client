@@ -76,7 +76,7 @@ const PRESET_BLACKLIST = {
         "tag": "geosite-geolocation-!cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-geolocation-!cn.srs",
-        "http_client": "proxy",
+        "http_client": {"detour": "proxy"},
         "update_interval": "1d"
       },
       {
@@ -84,7 +84,7 @@ const PRESET_BLACKLIST = {
         "tag": "geosite-cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": "proxy",
+        "http_client": {"detour": "proxy"},
         "update_interval": "1d"
       }
     ],
@@ -116,7 +116,7 @@ const PRESET_WHITELIST = {
         "tag": "geosite-cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
-        "http_client": "proxy",
+        "http_client": {"detour": "proxy"},
         "update_interval": "1d"
       },
       {
@@ -124,7 +124,7 @@ const PRESET_WHITELIST = {
         "tag": "geoip-cn",
         "format": "binary",
         "url": "https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-cn.srs",
-        "http_client": "proxy",
+        "http_client": {"detour": "proxy"},
         "update_interval": "1d"
       }
     ],
