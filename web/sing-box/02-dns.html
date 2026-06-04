@@ -31,9 +31,25 @@
 
 <div class="content">
   <h2>02-dns.json</h2>
+
+  <!-- 预设模板 -->
+  <details style="margin-bottom: 16px;" open>
+    <summary style="cursor:pointer;font-weight:600;color:#1976d2;">📋 预设模板</summary>
+    <div style="margin-top:8px;padding:12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;">
+      <p style="font-size:13px;color:#666;margin-bottom:8px;">选择一个预设模板加载到编辑器，按需修改后保存</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="loadPreset('ruleSet')" style="padding:8px 16px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">规则集模式</button>
+        <button onclick="loadPreset('domain')" style="padding:8px 16px;background:#388e3c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">域名模式</button>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#999;">
+        <span style="color:#1976d2;">● 规则集</span> = 非中国站点走 google，其余系统 DNS &nbsp;|&nbsp;
+        <span style="color:#388e3c;">● 域名</span> = 中国站点走系统 DNS，其余 google
+      </div>
+    </div>
+  </details>
+
   <div class="btn-row">
     <button onclick="readConfig()">读取配置</button>
-    <button onclick="fillSuggestion()">填充建议</button>
   </div>
   <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
   <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
@@ -43,34 +59,31 @@
 
 <script>
 const FILENAME = "02-dns.json";
-const SUGGESTION_DATA = {
+
+// 公共 servers 配置
+const DNS_SERVERS = [
+  {"tag": "google", "type": "tls", "server": "8.8.8.8"},
+  {"tag": "google-v6", "type": "tls", "server": "2001:4860:4860::8888"},
+  {"tag": "cloudflare", "type": "tls", "server": "1.1.1.1"},
+  {"tag": "cloudflare-v6", "type": "tls", "server": "2606:4700:4700::1111"},
+  {"tag": "system", "type": "local"}
+];
+
+// 预设 1: 规则集模式 - 非中国站点走 google，其余系统 DNS
+const PRESET_RULE_SET = {
   "dns": {
-    "servers": [
-      {
-        "tag": "google",
-        "type": "tls",
-        "server": "8.8.8.8"
-      },
-      {
-        "tag": "google-v6",
-        "type": "tls",
-        "server": "2001:4860:4860::8888"
-      },
-      {
-        "tag": "cloudflare",
-        "type": "tls",
-        "server": "1.1.1.1"
-      },
-      {
-        "tag": "cloudflare-v6",
-        "type": "tls",
-        "server": "2606:4700:4700::1111"
-      },
-      {
-        "tag": "system",
-        "type": "local"
-      }
+    "servers": DNS_SERVERS,
+    "rules": [
+      {"rule_set": "geosite-geolocation-!cn", "server": "google"}
     ],
+    "final": "system"
+  }
+};
+
+// 预设 2: 域名模式 - 中国站点走系统 DNS，其余 google
+const PRESET_DOMAIN = {
+  "dns": {
+    "servers": DNS_SERVERS,
     "rules": [
       {
         "domain": ["geosite:cn"],
@@ -81,6 +94,20 @@ const SUGGESTION_DATA = {
     "final": "google"
   }
 };
+
+function loadPreset(type) {
+  let config;
+  let name;
+  if (type === 'ruleSet') {
+    config = PRESET_RULE_SET;
+    name = '规则集模式';
+  } else if (type === 'domain') {
+    config = PRESET_DOMAIN;
+    name = '域名模式';
+  }
+  document.getElementById('editor').value = JSON.stringify(config, null, 2);
+  showMsg('已加载预设: ' + name, true);
+}
 </script>
 <script src="./common.js"></script>
 </body>

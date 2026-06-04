@@ -63,7 +63,9 @@ const FILENAME = "03-route.json";
 // GFW 黑名单：默认 direct，被墙站点 → proxy
 const PRESET_BLACKLIST = {
   "route": {
-    "default_domain_resolver": "system",
+    "default_domain_resolver": {
+      "server": "system"
+    },
     "rules": [
       {
         "rule_set": ["geosite-geolocation-!cn"],
@@ -72,16 +74,28 @@ const PRESET_BLACKLIST = {
     ],
     "rule_set": [
       {
-        "type": "local",
-        "tag": "geosite-geolocation-!cn",
+        "type": "remote",
+        "tag": "geoip-cn",
         "format": "binary",
-        "path": "geosite-geolocation-!cn.srs"
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
       },
       {
-        "type": "local",
+        "type": "remote",
+        "tag": "geosite-geolocation-!cn",
+        "format": "binary",
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-geolocation-!cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
         "tag": "geosite-cn",
         "format": "binary",
-        "path": "geosite-cn.srs"
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
       }
     ],
     "final": "direct"
@@ -91,7 +105,9 @@ const PRESET_BLACKLIST = {
 // GFW 白名单 / 国内直连：默认 proxy，国内站点 → direct
 const PRESET_WHITELIST = {
   "route": {
-    "default_domain_resolver": "system",
+    "default_domain_resolver": {
+      "server": "system"
+    },
     "rules": [
       {
         "ip_is_private": true,
@@ -108,16 +124,28 @@ const PRESET_WHITELIST = {
     ],
     "rule_set": [
       {
-        "type": "local",
-        "tag": "geosite-cn",
-        "format": "binary",
-        "path": "geosite-cn.srs"
-      },
-      {
-        "type": "local",
+        "type": "remote",
         "tag": "geoip-cn",
         "format": "binary",
-        "path": "geoip-cn.srs"
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geoip/raw/rule-set/geoip-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "geosite-geolocation-!cn",
+        "format": "binary",
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-geolocation-!cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
+      },
+      {
+        "type": "remote",
+        "tag": "geosite-cn",
+        "format": "binary",
+        "url": "https://uniproxy.lvedong.eu.org/https://github.com/SagerNet/sing-geosite/raw/rule-set/geosite-cn.srs",
+        "download_detour": "proxy",
+        "update_interval": "1d"
       }
     ],
     "final": "proxy"
