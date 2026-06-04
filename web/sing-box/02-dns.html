@@ -38,8 +38,8 @@
     <div style="margin-top:8px;padding:12px;background:#f9f9f9;border:1px solid #e0e0e0;border-radius:4px;">
       <p style="font-size:13px;color:#666;margin-bottom:8px;">选择一个预设模板加载到编辑器，按需修改后保存</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button onclick="loadPreset('ruleSet')" style="padding:8px 16px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">规则集模式</button>
-        <button onclick="loadPreset('domain')" style="padding:8px 16px;background:#388e3c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">域名模式</button>
+        <button onclick="loadPreset('ruleSet')" style="padding:8px 16px;background:#1976d2;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">模板1</button>
+        <button onclick="loadPreset('domain')" style="padding:8px 16px;background:#388e3c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px;">模板2</button>
       </div>
       <div style="margin-top:8px;font-size:12px;color:#999;">
         <span style="color:#1976d2;">● 规则集</span> = 非中国站点走 google，其余系统 DNS &nbsp;|&nbsp;
@@ -69,7 +69,7 @@ const DNS_SERVERS = [
   {"tag": "system", "type": "local"}
 ];
 
-// 预设 1: 规则集模式 - 非中国站点走 google，其余系统 DNS
+// 预设 1: 模板1 - 非中国站点走 google，其余系统 DNS
 const PRESET_RULE_SET = {
   "dns": {
     "servers": DNS_SERVERS,
@@ -80,7 +80,7 @@ const PRESET_RULE_SET = {
   }
 };
 
-// 预设 2: 域名模式 - 中国站点走系统 DNS，其余 google
+// 预设 2: 模板2 - 中国站点走系统 DNS，其余 google
 const PRESET_DOMAIN = {
   "dns": {
     "servers": DNS_SERVERS,
@@ -100,10 +100,10 @@ function loadPreset(type) {
   let name;
   if (type === 'ruleSet') {
     config = PRESET_RULE_SET;
-    name = '规则集模式';
+    name = '模板1';
   } else if (type === 'domain') {
     config = PRESET_DOMAIN;
-    name = '域名模式';
+    name = '模板2';
   }
   document.getElementById('editor').value = JSON.stringify(config, null, 2);
   showMsg('已加载预设: ' + name, true);
