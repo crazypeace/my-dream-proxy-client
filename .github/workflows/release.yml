@@ -52,6 +52,7 @@ jobs:
           cp my-dream-proxy-client${{ matrix.suffix }} release/
           cp mdpc-config.yaml.default release/
           cp mdpc-config-hy2.yaml.default release/
+          cp mdpc-config-singbox.yaml.default release/
           cp bin/xray/put_xray_bin_config_here release/bin/xray/
           cp bin/hy2/put_hy2_bin_config_here release/bin/hy2/
           cp bin/sing-box/put_sing-box_bin_config_here release/bin/sing-box/
