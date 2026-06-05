@@ -198,7 +198,7 @@ Server starting on 127.0.0.1:18080
 将 zip 包解压到任意目录，例如：
 
 ```bash
-unzip my-dream-proxy-client-linux-arm64.zip -d ~/mdpc
+unzip my-dream-proxy-client-linux-*.zip -d ~/mdpc
 cd ~/mdpc
 ```
 
@@ -212,7 +212,6 @@ web
     ├── common.css
     ├── common.js
     └── config.html
-
 bin
 └── hy2                       # Hysteria 内核目录
     └── put_hy2_bin_config_here
@@ -350,4 +349,131 @@ my-dream-proxy-client listening on 127.0.0.1:18180
 | 10809 | Hysteria2 HTTP 本地代理 |
 
 
+</details>
+
+# my-dream-proxy-client 使用手册 (配合sing-box内核)
+
+<details>
+    <summary>点击展开</summary>
+
+
+## 第一步：下载 my-dream-proxy-client(下称MDPC)
+
+从[GitHub Releases](https://github.com/crazypeace/my-dream-proxy-client/releases) 页面下载对应架构的 zip 包：
+
+
+- `my-dream-proxy-client-windows-amd64.zip` — Windows 64位
+- `my-dream-proxy-client-linux-amd64.zip` — Linux x86_64
+- `my-dream-proxy-client-linux-arm64.zip` — Linux ARM64
+
+解压：
+
+```bash
+unzip my-dream-proxy-client-linux-*.zip -d mdpc
+cd mdpc
+```
+
+解压后目录结构：
+
+```
+mdpc/
+├── my-dream-proxy-client          # 主程序
+├── mdpc-config-sing-box.yaml.default   # MDPC配置模板（sing-box）
+├── bin/
+│   └── sing-box/
+│       └── put_sing-box_bin_config_here  # 占位符
+└── web/
+    └── sing-box/                   # sing-box 前端页面
+        ├── 01-log.html
+        ├── 02-dns.html
+        ├── 03-route.html
+        ├── 04-inbounds.html
+        ├── 05-outbounds.html
+        ├── common.css
+        └── common.js
+```
+
+## 第二步：下载 sing-box
+
+从 [sing-box 官方仓库](https://github.com/SagerNet/sing-box/releases)下载对应架构的二进制文件：
+
+将 `sing-box`（Linux）或 `sing-box.exe`（Windows）放到 `bin/sing-box/` 目录下
+
+
+
+## 第三步：创建 MDPC 配置文件
+```bash
+cp mdpc-config-singbox.yaml.default mdpc-config.yaml
+```
+
+用文本编辑器打开 mdpc-config.yaml，内容如下：
+
+```yaml
+listen: "127.0.0.1"
+port: "18280"
+files-dir: "bin/sing-box/"
+core-start: "bin/sing-box/sing-box run -c bin/sing-box/config.json"
+core-test: "bin/sing-box/sing-box check -c bin/sing-box/config.json"
+log: ""
+```
+
+
+## 第四步：启动 MDPC 后端
+
+```bash
+./my-dream-proxy-client
+```
+
+
+看到以下输出表示启动成功：
+
+```
+my-dream-proxy-client listening on 127.0.0.1:18280
+```
+
+## 第五步：打开 MDPC 前端配置页面
+
+可以使用浏览器直接打开HTML文件 `file:///05-outbounds.html`
+
+也可以启动一个本地的HTTP服务, 如 `python -m http.server 8000` 再用浏览器访问 `http://127.0.0.1:8000/05-outbounds.html`
+
+### 5.1 Inbound 配置
+
+打开 `file:///04-inbounds.html`
+
+点击 **「填充建议」** 按钮 → 点击 **「保存」**
+
+
+### 5.2 Outbound 配置
+
+打开 `file:///05-outbounds.html`
+
+展开 **「🔗 AnyTLS 分享链接解析」** 面板，粘贴 anytls 链接，点击 **「解析并添加」** → 点击 **「保存」**
+
+
+
+### 5.3 DNS 配置 (可选)
+
+打开 `file:///02-dns.html`
+
+点击 **「预设-1」** 按钮 → 点击 **「保存」**
+
+
+### 5.4 Route 配置 (可选)
+
+打开 `file:///03-route.html`
+
+点击 **「GFW 黑名单」** 按钮 → 点击 **「保存」**
+
+
+## 第六步：启动代理内核
+
+1. 配置好 04-inbounds、05-outbounds (及你希望配置的内容)后
+2. 点击页面顶部的 **▶ 启动** 按钮
+3. 状态指示器变为 "运行中 (pid XXXX)" 即表示成功
+
+默认inbounds是开启代理：
+   - **SOCKS 代理：** `127.0.0.1:10808`
+   - **HTTP 代理：** `127.0.0.1:10809`
+    
 </details>
