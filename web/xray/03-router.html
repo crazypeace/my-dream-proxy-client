@@ -34,6 +34,7 @@
   <h2>03-router.json</h2>
   <div class="btn-row">
     <button onclick="readConfig()">读取配置</button>
+    <button onclick="fillSuggestion()">填充建议</button>
   </div>
   <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
   <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
@@ -41,7 +42,7 @@
   </div>
 </div>
 
-<script>const FILENAME = "03-router.json";</script>
+<script>const FILENAME = "03-router.json"; const SUGGESTION_DATA = {"routing": {"domainStrategy": "IPIfNonMatch", "rules": [{"type": "field", "domain": ["geosite:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"}], "final": "proxy"}};</script>
 <script src="./common.js"></script>
 </body>
 </html>
