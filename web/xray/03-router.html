@@ -41,7 +41,7 @@
   </div>
 </div>
 
-<script>const FILENAME = "03-router.json"; const SUGGESTION_DATA = {"routing": {"domainStrategy": "IPIfNonMatch", "rules": [{"type": "field", "domain": ["geosite:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"}], "final": "proxy"}};</script>
+<script>const FILENAME = "03-router.json"; const SUGGESTION_DATA = {"routing": {"domainStrategy": "IPIfNonMatch", "rules": [{"type": "field", "domain": ["geosite:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"}, {"type": "field", "domain": ["geosite:geolocation-!cn"], "outboundTag": "proxy"}], "final": "proxy"}};</script>
 <script src="./common.js"></script>
 </body>
 </html>
