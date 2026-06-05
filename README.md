@@ -5,6 +5,8 @@
 
 https://zelikk.blogspot.com/2026/06/xray-reality-mdpc-my-dream-proxy-client.html
 
+https://zelikk.blogspot.com/2026/06/mdpc-my-dream-proxy-client-hysteria.html
+
 # my-dream-proxy-client 使用手册 (配合Xray内核)
 
 <details >
