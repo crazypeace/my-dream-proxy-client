@@ -448,6 +448,9 @@ my-dream-proxy-client listening on 127.0.0.1:18280
 
 打开 `file:///05-outbounds.html`
 
+<img width="1218" height="2346" alt="image" src="https://github.com/user-attachments/assets/ebec57e9-44cd-433a-9d4d-32641f14017b" />
+
+
 展开 **「🔗 AnyTLS 分享链接解析」** 面板，粘贴 anytls 链接，点击 **「解析并添加」** → 点击 **「保存」**
 
 
