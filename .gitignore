@@ -22,3 +22,6 @@ bin/sing-box/*
 # Backup files
 *.bak
 bin/core/
+
+# md
+*.md
