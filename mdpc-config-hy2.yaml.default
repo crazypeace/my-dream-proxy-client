@@ -1,8 +1,0 @@
-listen: "127.0.0.1"
-port: "18180"
-log: ""
-
-hy2:
-    files-dir: "./bin/hy2/"
-    core-start: "bin/hy2/hysteria client -c bin/hy2/config.yaml"
-    core-test: ""
