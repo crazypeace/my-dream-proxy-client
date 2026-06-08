@@ -1,8 +1,8 @@
 # Compiled binaries
 my-dream-proxy-client
 my-dream-proxy-client.exe
-/mdpc
-/mdpc.exe
+mdpc
+mdpc.exe
 
 # Everything in bin/xray/ except the placeholder
 bin/xray/*
