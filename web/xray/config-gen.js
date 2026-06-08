@@ -72,3 +72,16 @@ function generateXrayConfig(outbounds) {
   var all = outbounds.concat([makeXrayDirect()]);
   return JSON.stringify({ outbounds: all }, null, 2);
 }
+
+// Generate xray inbound config from localStorage ports.
+// Keys: "socks-port", "http-port" (defaults: 10808, 10809)
+function generateXrayInbound() {
+  var socksPort = parseInt(localStorage.getItem("socks-port")) || 10808;
+  var httpPort = parseInt(localStorage.getItem("http-port")) || 10809;
+  return {
+    inbounds: [
+      { listen: "127.0.0.1", port: socksPort, protocol: "socks", settings: { udp: true }, tag: "socks-in" },
+      { listen: "127.0.0.1", port: httpPort, protocol: "http", tag: "http-in" }
+    ]
+  };
+}

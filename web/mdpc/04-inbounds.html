@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>inbounds - MDPC</title>
 <link rel="stylesheet" href="./common.css">
+<script src="../xray/config-gen.js?v=2"></script>
+<script src="../sing-box/config-gen.js?v=2"></script>
+<style>
+  .port-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+  .port-row label { font-size: 13px; font-weight: 500; min-width: 80px; }
+  .port-row input { width: 100px; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  .links { margin-top: 20px; display: flex; gap: 16px; }
+  .links a { color: #1a73e8; text-decoration: none; font-size: 14px; }
+  .links a:hover { text-decoration: underline; }
+</style>
 </head>
 <body>
 
@@ -26,9 +36,81 @@
 
 <div class="content">
   <h2>inbounds</h2>
-  <p style="color:#999;font-size:14px;margin-top:40px;text-align:center;">🚧 占位页面，尚未实现</p>
+
+  <div class="port-row">
+    <label>SOCKS 端口:</label>
+    <input type="number" id="socksPort" value="10808" onchange="savePorts()">
+    <label>HTTP 端口:</label>
+    <input type="number" id="httpPort" value="10809" onchange="savePorts()">
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" onclick="saveAll()">💾 保存 xray 和 sing-box 配置</button>
+  </div>
+
+  <div class="links">
+    <a href="../xray/04-inbounds.html">→ xray inbound 页面</a>
+    <a href="../sing-box/04-inbounds.html">→ sing-box inbound 页面</a>
+  </div>
 </div>
 
+<script>
+const FILENAME = "04-inbounds.json";
+
+function coreApiUrl(core, path) {
+  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + "/api/" + core + path;
+}
+
+function savePorts() {
+  localStorage.setItem("socks-port", document.getElementById("socksPort").value);
+  localStorage.setItem("http-port", document.getElementById("httpPort").value);
+}
+
+function loadPorts() {
+  document.getElementById("socksPort").value = localStorage.getItem("socks-port") || "10808";
+  document.getElementById("httpPort").value = localStorage.getItem("http-port") || "10809";
+}
+
+async function saveAll() {
+  savePorts();
+  var results = [];
+
+  // xray
+  try {
+    var data = generateXrayInbound();
+    var content = JSON.stringify(data, null, 2);
+    var res = await fetch(coreApiUrl("xray", "/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content })
+    });
+    var r = await res.json();
+    results.push(r.error ? "xray ❌ " + r.error : "xray ✅");
+  } catch (e) {
+    results.push("xray ❌ " + e.message);
+  }
+
+  // sing-box
+  try {
+    var data = generateSingboxInbound();
+    var content = JSON.stringify(data, null, 2);
+    var res = await fetch(coreApiUrl("sing-box", "/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content })
+    });
+    var r = await res.json();
+    results.push(r.error ? "sing-box ❌ " + r.error : "sing-box ✅");
+  } catch (e) {
+    results.push("sing-box ❌ " + e.message);
+  }
+
+  showMsg(results.join("  |  "), !results.some(r => r.includes("❌")));
+}
+
+// Init
+loadPorts();
+</script>
 <script src="./common.js"></script>
 </body>
 </html>

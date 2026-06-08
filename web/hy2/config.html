@@ -130,6 +130,14 @@ function convertFingerprint() {
 
 document.getElementById("f_pinSHA256").addEventListener("input", convertFingerprint);
 
+// --- Port localStorage ---
+const socksEl = document.getElementById("f_socksPort");
+const httpEl = document.getElementById("f_httpPort");
+socksEl.value = localStorage.getItem("socks-port") || "10808";
+httpEl.value = localStorage.getItem("http-port") || "10809";
+socksEl.addEventListener("input", () => localStorage.setItem("socks-port", socksEl.value));
+httpEl.addEventListener("input", () => localStorage.setItem("http-port", httpEl.value));
+
 // --- Form <-> YAML ---
 
 function gatherForm() {
