@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05-outbounds - MDPC</title>
+<link rel="stylesheet" href="./common.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/uri-js@4.4.1/dist/es5/uri.all.min.js"></script>
+<script src="../xray/config-gen.js"></script>
+<script src="../hy2/config-gen.js"></script>
+<script src="../sing-box/config-gen.js"></script>
+<style>
+  .uri-section { margin-bottom: 16px; padding: 16px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; }
+  .uri-section textarea { width: 100%; height: 80px; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
+  .uri-section .btn-group { margin-top: 8px; display: flex; gap: 8px; }
+
+  .outbound-form { margin: 16px 0; padding: 16px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; }
+  .form-row { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .form-row label { min-width: 70px; font-size: 13px; font-weight: 500; }
+  .form-row input[type="text"], .form-row input[type="number"], .form-row select { flex: 1; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  .form-row select { max-width: 200px; }
+
+  .outbound-list { margin: 12px 0; padding: 8px; background: #fff; border: 1px solid #e0e0e0; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+  .outbound-item { padding: 6px 8px; cursor: pointer; border-radius: 3px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .outbound-item:hover { background: #e3f2fd; }
+  .outbound-item.active { background: #bbdefb; font-weight: 500; }
+  .outbound-item .core-badge { font-size: 11px; padding: 1px 6px; border-radius: 3px; color: #fff; }
+  .core-badge.core-xray { background: #1976d2; }
+  .core-badge.core-hy2 { background: #388e3c; }
+  .core-badge.core-sing-box { background: #7b1fa2; }
+  .outbound-item .proto-tag { color: #888; font-size: 12px; }
+  .outbound-item .uri-text { color: #666; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .section-header span { font-size: 13px; font-weight: 500; }
+  .section-header .btn-group { display: flex; gap: 8px; }
+
+  /* Collapsible sections */
+  .section-body { display: none; }
+  .section-body.open { display: block; }
+  .arrow { transition: transform 0.2s; }
+  .arrow.open { transform: rotate(90deg); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">MDPC</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">log</a>
+  <a href="02-dns.html">dns</a>
+  <a href="03-route.html">route</a>
+  <a href="04-inbounds.html">inbounds</a>
+  <a href="05-outbounds.html" class="active">outbounds</a>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>outbounds.yaml</h2>
+
+  <!-- URI 输入区 (可折叠) -->
+  <div class="section" id="uriSection">
+    <div class="section-header" onclick="toggleSection('uri')" style="cursor:pointer;display:flex;align-items:center;padding:10px 16px;background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;margin-bottom:0;">
+      <span class="arrow open" id="uriArrow" style="margin-right:8px;font-size:12px;transition:transform 0.2s;">▶</span>
+      <span style="font-weight:500;font-size:15px;">节点链接解析</span>
+    </div>
+    <div class="section-body open" id="uriBody" style="padding:16px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 4px 4px;background:#f9f9f9;">
+      <p style="font-size:13px;color:#666;margin-bottom:8px;">粘贴节点链接（每行一个），支持 anytls:// vless:// hysteria2:// vmess:// trojan:// ss://</p>
+      <textarea id="uriInput" placeholder="anytls://password@server:port?allowInsecure=1#name&#10;vless://uuid@server:port?type=tcp&security=tls#name" style="width:100%;height:80px;font-family:monospace;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px;resize:vertical;"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button onclick="parseAndAddUri()">➕ 解析并添加</button>
+        <button onclick="document.getElementById('uriInput').value='';showMsg('已清空',true);">🗑 清空</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Outbound 列表 -->
+  <div>
+    <div class="section-header">
+      <span>Outbound 列表 (<span id="outboundCount">0</span>)</span>
+      <div class="btn-group">
+        <button onclick="syncOutboundsFromYaml()" style="font-size:12px;">⟲ 从YAML同步</button>
+        <button onclick="removeOutbound()" style="font-size:12px;color:#d32f2f;">✕ 删除选中</button>
+      </div>
+    </div>
+    <div class="outbound-list" id="outboundList">
+      <div style="font-size:12px;color:#999;">暂无 outbound，粘贴链接后点击「解析并添加」</div>
+    </div>
+  </div>
+
+  <!-- 表单编辑器 -->
+  <div class="outbound-form" id="outboundForm">
+    <div class="form-row">
+      <label>Core</label>
+      <input type="text" id="formCore" readonly style="background:#eee;color:#666;cursor:not-allowed;max-width:200px;">
+    </div>
+    <div class="form-row">
+      <label>Tag</label>
+      <input type="text" id="formTag" placeholder="节点名称" oninput="syncFormToOutbound()">
+    </div>
+    <div class="form-row">
+      <label>URI</label>
+      <input type="text" id="formUri" placeholder="protocol://..." oninput="syncFormUriToOutbound()" style="font-family:monospace;font-size:12px;">
+    </div>
+  </div>
+
+  <!-- 读取配置 & Raw 编辑器 -->
+  <div class="btn-row">
+    <button onclick="readConfig()">📥 读取配置</button>
+  </div>
+  <textarea class="editor" id="editor" placeholder='点击「读取配置」加载内容，或直接编辑 YAML...&#10;&#10;outbounds:&#10;- "vless://..."&#10;- "hysteria2://..."'></textarea>
+  <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+    <button class="btn-primary" onclick="saveConfig()">💾 保存</button>
+  </div>
+</div>
+
+<script>
+const FILENAME = "mdpc-outbounds.yaml";
+let currentOutbounds = []; // [{core, uri, tag, protocol}]
+let selectedIndex = -1;
+
+function toggleSection(name) {
+  const body = document.getElementById(name + "Body");
+  const arrow = document.getElementById(name + "Arrow");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+// --- URI 解析 ---
+
+const PROTOCOL_CORE_MAP = {
+  "anytls": "sing-box",
+  "vless": "xray",
+  "vmess": "xray",
+  "trojan": "xray",
+  "hysteria2": "hy2",
+  "hysteria": "hy2",
+  "hy2": "hy2",
+  "ss": "xray"
+};
+
+function parseUriString(uri) {
+  uri = uri.trim();
+  if (!uri) return null;
+
+  const regex = /^(\w+):\/\/([^@]*)@([^:?#]+):(\d+)(?:\?([^#]*))?(?:#(.*))?$/;
+  const m = uri.match(regex);
+  if (!m) return null;
+
+  const protocol = m[1];
+  const tag = m[6] ? decodeURIComponent(m[6]) : (protocol + "-" + m[3]);
+  const core = PROTOCOL_CORE_MAP[protocol] || "xray";
+
+  return { core, uri, tag, protocol };
+}
+
+function parseAndAddUri() {
+  const input = document.getElementById("uriInput").value.trim();
+  if (!input) { showMsg("请输入节点链接", false); return; }
+
+  const lines = input.split("\n").map(l => l.trim()).filter(l => l && l.includes("://"));
+  if (lines.length === 0) { showMsg("未找到有效的链接", false); return; }
+
+  let added = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const ob = parseUriString(lines[i]);
+    if (ob) {
+      currentOutbounds.push(ob);
+      added++;
+    } else {
+      showMsg("第 " + (i + 1) + " 条链接解析失败: " + lines[i].substring(0, 40) + "...", false);
+    }
+  }
+
+  if (added > 0) {
+    selectedIndex = currentOutbounds.length - added;
+    renderOutboundList();
+    updateFormFromOutbound();
+    syncYamlFromOutbounds();
+    showMsg("已添加 " + added + " 条 outbound", true);
+  }
+}
+
+// --- Outbound 列表 ---
+
+function renderOutboundList() {
+  const list = document.getElementById("outboundList");
+  document.getElementById("outboundCount").textContent = currentOutbounds.length;
+
+  if (currentOutbounds.length === 0) {
+    list.innerHTML = '<div style="font-size:12px;color:#999;">暂无 outbound，粘贴链接后点击「解析并添加」</div>';
+    return;
+  }
+
+  list.innerHTML = currentOutbounds.map((ob, i) =>
+    '<div class="outbound-item ' + (i === selectedIndex ? 'active' : '') + '" onclick="selectOutbound(' + i + ')">' +
+      '<span class="core-badge core-' + ob.core + '">' + ob.core + '</span>' +
+      '<strong>' + escHtml(ob.tag) + '</strong>' +
+      '<span class="proto-tag">(' + ob.protocol + ')</span>' +
+      '<span class="uri-text" title="' + escHtml(ob.uri) + '">' + escHtml(ob.uri) + '</span>' +
+    '</div>'
+  ).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function selectOutbound(index) {
+  selectedIndex = index;
+  renderOutboundList();
+  updateFormFromOutbound();
+  updateStatus();
+}
+
+function removeOutbound() {
+  if (currentOutbounds.length === 0) { showMsg("没有可删除的 outbound", false); return; }
+  if (selectedIndex < 0) { showMsg("请先选择要删除的 outbound", false); return; }
+
+  currentOutbounds.splice(selectedIndex, 1);
+  if (selectedIndex >= currentOutbounds.length) {
+    selectedIndex = currentOutbounds.length - 1;
+  }
+  renderOutboundList();
+  updateFormFromOutbound();
+  syncYamlFromOutbounds();
+  showMsg("已删除", true);
+}
+
+// --- 表单同步 ---
+
+function updateFormFromOutbound() {
+  if (selectedIndex < 0 || selectedIndex >= currentOutbounds.length) {
+    document.getElementById("formCore").value = "xray";
+    document.getElementById("formTag").value = "";
+    document.getElementById("formUri").value = "";
+    return;
+  }
+  const ob = currentOutbounds[selectedIndex];
+  document.getElementById("formCore").value = ob.core;
+  document.getElementById("formTag").value = ob.tag;
+  document.getElementById("formUri").value = ob.uri;
+}
+
+function syncFormToOutbound() {
+  if (selectedIndex < 0 || selectedIndex >= currentOutbounds.length) return;
+  const ob = currentOutbounds[selectedIndex];
+  ob.tag = document.getElementById("formTag").value;
+  // update URI fragment
+  ob.uri = updateUriFragment(ob.uri, ob.tag);
+  document.getElementById("formUri").value = ob.uri;
+  renderOutboundList();
+  syncYamlFromOutbounds();
+}
+
+function syncFormUriToOutbound() {
+  if (selectedIndex < 0 || selectedIndex >= currentOutbounds.length) return;
+  const uri = document.getElementById("formUri").value.trim();
+  const parsed = parseUriString(uri);
+  if (!parsed) return;
+  const ob = currentOutbounds[selectedIndex];
+  ob.uri = uri;
+  ob.tag = parsed.tag;
+  ob.protocol = parsed.protocol;
+  ob.core = parsed.core; // core is derived from protocol
+  document.getElementById("formCore").value = ob.core;
+  document.getElementById("formTag").value = ob.tag;
+  renderOutboundList();
+  syncYamlFromOutbounds();
+}
+
+function updateUriFragment(uri, name) {
+  const hashIdx = uri.indexOf("#");
+  const base = hashIdx >= 0 ? uri.substring(0, hashIdx) : uri;
+  return base + "#" + encodeURIComponent(name);
+}
+
+// --- YAML 同步 ---
+
+function syncYamlFromOutbounds() {
+  const data = { outbounds: currentOutbounds.map(ob => ob.uri) };
+  document.getElementById("editor").value = jsyaml.dump(data, { lineWidth: -1, quotingType: '"', forceQuotes: false });
+}
+
+function syncOutboundsFromYaml() {
+  const content = document.getElementById("editor").value.trim();
+  if (!content) {
+    currentOutbounds = [];
+    selectedIndex = -1;
+    renderOutboundList();
+    updateFormFromOutbound();
+    return;
+  }
+  try {
+    const data = jsyaml.load(content);
+    if (!data || !data.outbounds || !Array.isArray(data.outbounds)) {
+      showMsg("YAML 格式错误: 缺少 outbounds 数组", false);
+      return;
+    }
+    currentOutbounds = data.outbounds.map(item => {
+      const uri = typeof item === "string" ? item : (item.uri || "");
+      return parseUriString(uri) || { core: "xray", uri: uri, tag: uri, protocol: "?" };
+    });
+    if (selectedIndex >= currentOutbounds.length) selectedIndex = currentOutbounds.length - 1;
+    if (selectedIndex < 0 && currentOutbounds.length > 0) selectedIndex = 0;
+    renderOutboundList();
+    updateFormFromOutbound();
+    showMsg("已从 YAML 同步 " + currentOutbounds.length + " 条 outbound", true);
+  } catch (e) {
+    showMsg("YAML 解析失败: " + e.message, false);
+  }
+}
+
+// --- core API helper (不走 mdpc 的 /api/mdpc/ 前缀) ---
+
+function coreApiUrl(core, path) {
+  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + "/api/" + core + path;
+}
+
+// --- 启动 / 停止 ---
+
+async function startCore() {
+  if (selectedIndex < 0 || selectedIndex >= currentOutbounds.length) {
+    showMsg("请先选择一个 outbound", false); return;
+  }
+
+  const ob = currentOutbounds[selectedIndex];
+  const core = ob.core;
+  let configContent, filename;
+
+  if (core === "xray") {
+    const outbound = parseXrayUri(ob.uri);
+    configContent = generateXrayConfig([outbound]);
+    filename = "05-outbounds.json";
+  } else if (core === "hy2") {
+    const outbound = parseHy2Uri(ob.uri);
+    configContent = generateHy2Config(outbound);
+    filename = "config.yaml";
+  } else if (core === "sing-box") {
+    const outbound = parseSingboxUri(ob.uri);
+    configContent = generateSingboxConfig([outbound]);
+    filename = "05-outbounds.json";
+  } else {
+    showMsg("不支持的内核: " + core, false); return;
+  }
+
+  // 1. 写入配置文件
+  showMsg("正在写入 " + core + " 配置...", true);
+  try {
+    const res = await fetch(coreApiUrl(core, "/files/" + filename), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: configContent })
+    });
+    const data = await res.json();
+    if (data.error) { showMsg("写入配置失败: " + data.error, false); return; }
+  } catch (e) {
+    showMsg("写入配置失败: " + e.message, false); return;
+  }
+
+  // 2. 启动内核
+  showMsg("正在启动 " + core + "...", true);
+  try {
+    const res = await fetch(coreApiUrl(core, "/core/start"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg("启动失败: " + data.error, false); return; }
+    showMsg("已启动 " + core + " (pid " + data.data.pid + ")", true);
+    setTimeout(updateStatus, 1000);
+  } catch (e) {
+    showMsg("启动失败: " + e.message, false);
+  }
+}
+
+async function stopCore() {
+  const core = document.getElementById("formCore").value;
+  if (!core) { showMsg("请先选择一个 outbound", false); return; }
+
+  try {
+    const res = await fetch(coreApiUrl(core, "/core/stop"), { method: "POST" });
+    const data = await res.json();
+    if (data.error) { showMsg("停止失败: " + data.error, false); return; }
+    showMsg("已停止 " + core, true);
+    updateStatus();
+  } catch (e) {
+    showMsg("停止失败: " + e.message, false);
+  }
+}
+
+async function updateStatus() {
+  const core = document.getElementById("formCore").value;
+  if (!core) {
+    document.getElementById("statusText").textContent = "";
+    return;
+  }
+  try {
+    const res = await fetch(coreApiUrl(core, "/core/status"));
+    const data = await res.json();
+    if (data.data) {
+      document.getElementById("statusText").textContent =
+        data.data.running ? core + " 运行中 (pid " + data.data.pid + ")" : core + " 已停止";
+    }
+  } catch (e) {
+    document.getElementById("statusText").textContent = "无法连接";
+  }
+}
+
+// 编辑器变化时自动同步
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("editor").addEventListener("input", function() {
+    syncOutboundsFromYaml();
+  });
+  updateStatus();
+});
+</script>
+<script src="./common.js"></script>
+<script>
+// Override readConfig/saveConfig to handle missing mdpc core gracefully
+async function readConfig() {
+  try {
+    const res = await fetch(api("/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) {
+      if (data.error.includes("core not found")) {
+        showMsg("配置文件读取失败: mdpc 核心未在配置文件中定义，请检查 mdpc-config.yaml", false);
+      } else {
+        showMsg(data.error, false);
+      }
+      return;
+    }
+    document.getElementById("editor").value = data.data.content;
+    showMsg("配置已加载", true);
+    syncOutboundsFromYaml();
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function saveConfig() {
+  const content = document.getElementById("editor").value;
+  if (!content.trim()) {
+    showMsg("内容为空，跳过保存", false);
+    return;
+  }
+  try {
+    const res = await fetch(api("/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content })
+    });
+    const data = await res.json();
+    if (data.error) {
+      if (data.error.includes("core not found")) {
+        showMsg("保存失败: mdpc 核心未在配置文件中定义，请检查 mdpc-config.yaml", false);
+      } else {
+        showMsg(data.error, false);
+      }
+      return;
+    }
+    showMsg("保存成功", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+</script>
+</body>
+</html>

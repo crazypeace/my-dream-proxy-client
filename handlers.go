@@ -38,11 +38,30 @@ func writeData(w http.ResponseWriter, data interface{}) {
 	writeJSON(w, 200, APIResponse{Data: data})
 }
 
+// getCore extracts the core name from the URL path and returns its config and process manager.
+func (app *App) getCore(r *http.Request) (*CoreConfig, *ProcessManager, error) {
+	coreName := r.PathValue("core")
+	core, ok := app.Config.Cores[coreName]
+	if !ok {
+		return nil, nil, fmt.Errorf("core not found: %s", coreName)
+	}
+	pm, ok := app.PMs[coreName]
+	if !ok {
+		return nil, nil, fmt.Errorf("process manager not found: %s", coreName)
+	}
+	return core, pm, nil
+}
+
 // --- File handlers ---
 
-func handleListFiles(confdir string) http.HandlerFunc {
+func handleListFiles(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		files, err := listFiles(confdir)
+		core, _, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
+		files, err := listFiles(core.FilesDir)
 		if err != nil {
 			writeError(w, 500, err.Error())
 			return
@@ -54,10 +73,15 @@ func handleListFiles(confdir string) http.HandlerFunc {
 	}
 }
 
-func handleReadFile(confdir string) http.HandlerFunc {
+func handleReadFile(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		core, _, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
 		filename := r.PathValue("filename")
-		content, err := readFile(confdir, filename)
+		content, err := readFile(core.FilesDir, filename)
 		if err != nil {
 			if isNotExist(err) {
 				writeError(w, 404, fmt.Sprintf("file not found: %s", filename))
@@ -70,8 +94,13 @@ func handleReadFile(confdir string) http.HandlerFunc {
 	}
 }
 
-func handleWriteFile(confdir string) http.HandlerFunc {
+func handleWriteFile(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		core, _, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
 		filename := r.PathValue("filename")
 
 		body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20)) // 10MB limit
@@ -88,7 +117,7 @@ func handleWriteFile(confdir string) http.HandlerFunc {
 			return
 		}
 
-		if err := writeFile(confdir, filename, req.Content); err != nil {
+		if err := writeFile(core.FilesDir, filename, req.Content); err != nil {
 			writeError(w, 500, err.Error())
 			return
 		}
@@ -96,10 +125,15 @@ func handleWriteFile(confdir string) http.HandlerFunc {
 	}
 }
 
-func handleDeleteFile(confdir string) http.HandlerFunc {
+func handleDeleteFile(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		core, _, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
 		filename := r.PathValue("filename")
-		if err := deleteFile(confdir, filename); err != nil {
+		if err := deleteFile(core.FilesDir, filename); err != nil {
 			if isNotExist(err) {
 				writeError(w, 404, fmt.Sprintf("file not found: %s", filename))
 			} else {
@@ -113,24 +147,35 @@ func handleDeleteFile(confdir string) http.HandlerFunc {
 
 // --- Process handlers ---
 
-func handleStatus(pm *ProcessManager) http.HandlerFunc {
+func handleStatus(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeData(w, pm.Status())
-	}
-}
-
-func handleStart(pm *ProcessManager, cfg *Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := pm.Start(cfg.CoreStart); err != nil {
-			writeError(w, 500, err.Error())
+		_, pm, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
 			return
 		}
 		writeData(w, pm.Status())
 	}
 }
 
-func handleStop(pm *ProcessManager) http.HandlerFunc {
+func handleStart(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		coreName := r.PathValue("core")
+		if err := app.StartExclusive(coreName); err != nil {
+			writeError(w, 500, err.Error())
+			return
+		}
+		writeData(w, app.PMs[coreName].Status())
+	}
+}
+
+func handleStop(app *App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, pm, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
 		if err := pm.Stop(); err != nil {
 			log.Printf("core/stop failed: %v", err)
 			writeError(w, 500, err.Error())
@@ -141,9 +186,14 @@ func handleStop(pm *ProcessManager) http.HandlerFunc {
 	}
 }
 
-func handleTest(pm *ProcessManager, cfg *Config) http.HandlerFunc {
+func handleTest(app *App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		valid, errMsg := pm.TestConfig(cfg.CoreTest)
+		core, pm, err := app.getCore(r)
+		if err != nil {
+			writeError(w, 404, err.Error())
+			return
+		}
+		valid, errMsg := pm.TestConfig(core.CoreTest)
 		writeData(w, map[string]interface{}{
 			"valid": valid,
 			"error": errMsg,

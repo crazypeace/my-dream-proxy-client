@@ -1,3 +1,5 @@
+const CORE_NAME = "sing-box";
+
 // Load API URL from localStorage
 (function() {
   const saved = localStorage.getItem("mdpc-api-url");
@@ -10,7 +12,7 @@ function saveApiUrl() {
 }
 
 function api(path) {
-  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + path;
+  return document.getElementById("apiUrl").value.replace(/\/+$/, "") + "/api/" + CORE_NAME + path;
 }
 
 function showMsg(text, ok) {
@@ -21,7 +23,7 @@ function showMsg(text, ok) {
 
 async function readConfig() {
   try {
-    const res = await fetch(api("/api/files/" + FILENAME));
+    const res = await fetch(api("/files/" + FILENAME));
     const data = await res.json();
     if (data.error) { showMsg(data.error, false); return; }
     document.getElementById("editor").value = data.data.content;
@@ -36,7 +38,7 @@ async function saveConfig() {
   if (!content.trim()) {
     // Empty content → delete the file
     try {
-      const res = await fetch(api("/api/files/" + FILENAME), { method: "DELETE" });
+      const res = await fetch(api("/files/" + FILENAME), { method: "DELETE" });
       const data = await res.json();
       if (data.error) { showMsg(data.error, false); return; }
       showMsg("文件已删除", true);
@@ -46,7 +48,7 @@ async function saveConfig() {
     return;
   }
   try {
-    const res = await fetch(api("/api/files/" + FILENAME), {
+    const res = await fetch(api("/files/" + FILENAME), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content })
@@ -78,7 +80,7 @@ async function startCore() {
   if (coreBusy) return;
   coreBusy = true;
   try {
-    const res = await fetch(api("/api/core/start"), { method: "POST" });
+    const res = await fetch(api("/core/start"), { method: "POST" });
     const data = await res.json();
     if (data.error) { showMsg(data.error, false); return; }
     setStatusFromData(data.data);
@@ -96,7 +98,7 @@ async function stopCore() {
   if (coreBusy) return;
   coreBusy = true;
   try {
-    const res = await fetch(api("/api/core/stop"), { method: "POST" });
+    const res = await fetch(api("/core/stop"), { method: "POST" });
     const data = await res.json();
     if (data.error) { showMsg(data.error, false); return; }
     setStatusFromData(data.data);
@@ -110,7 +112,7 @@ async function stopCore() {
 
 async function updateStatus() {
   try {
-    const res = await fetch(api("/api/core/status"));
+    const res = await fetch(api("/core/status"));
     const data = await res.json();
     if (data.data) {
       document.getElementById("statusText").textContent =

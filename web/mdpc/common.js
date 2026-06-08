@@ -1,4 +1,4 @@
-const CORE_NAME = "xray";
+const CORE_NAME = "mdpc";
 
 // Load API URL from localStorage
 (function() {
@@ -28,6 +28,8 @@ async function readConfig() {
     if (data.error) { showMsg(data.error, false); return; }
     document.getElementById("editor").value = data.data.content;
     showMsg("配置已加载", true);
+    // auto-sync after loading
+    syncOutboundsFromYaml();
   } catch (e) {
     showMsg("连接后端失败: " + e.message, false);
   }
@@ -36,7 +38,6 @@ async function readConfig() {
 async function saveConfig() {
   const content = document.getElementById("editor").value;
   if (!content.trim()) {
-    // Empty content → delete the file
     try {
       const res = await fetch(api("/files/" + FILENAME), { method: "DELETE" });
       const data = await res.json();
@@ -60,67 +61,3 @@ async function saveConfig() {
     showMsg("连接后端失败: " + e.message, false);
   }
 }
-
-function fillSuggestion() {
-  if (typeof SUGGESTION_DATA === "undefined") return;
-  document.getElementById("editor").value = JSON.stringify(SUGGESTION_DATA, null, 2);
-  showMsg("已填充建议内容", true);
-}
-
-let coreBusy = false;
-
-function setStatusFromData(data) {
-  if (data && data.running !== undefined) {
-    document.getElementById("statusText").textContent =
-      data.running ? "运行中 (pid " + data.pid + ")" : "已停止";
-  }
-}
-
-async function startCore() {
-  if (coreBusy) return;
-  coreBusy = true;
-  try {
-    const res = await fetch(api("/core/start"), { method: "POST" });
-    const data = await res.json();
-    if (data.error) { showMsg(data.error, false); return; }
-    setStatusFromData(data.data);
-    showMsg("已启动", true);
-    // Delayed confirm after restart settles
-    setTimeout(updateStatus, 1000);
-  } catch (e) {
-    showMsg("连接后端失败: " + e.message, false);
-  } finally {
-    coreBusy = false;
-  }
-}
-
-async function stopCore() {
-  if (coreBusy) return;
-  coreBusy = true;
-  try {
-    const res = await fetch(api("/core/stop"), { method: "POST" });
-    const data = await res.json();
-    if (data.error) { showMsg(data.error, false); return; }
-    setStatusFromData(data.data);
-    showMsg("已停止", true);
-  } catch (e) {
-    showMsg("连接后端失败: " + e.message, false);
-  } finally {
-    coreBusy = false;
-  }
-}
-
-async function updateStatus() {
-  try {
-    const res = await fetch(api("/core/status"));
-    const data = await res.json();
-    if (data.data) {
-      document.getElementById("statusText").textContent =
-        data.data.running ? "运行中 (pid " + data.data.pid + ")" : "已停止";
-    }
-  } catch (e) {
-    document.getElementById("statusText").textContent = "无法连接";
-  }
-}
-
-updateStatus();

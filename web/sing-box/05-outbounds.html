@@ -106,6 +106,8 @@
   </div>
 </div>
 
+<script src="./common.js"></script>
+<script src="./config-gen.js"></script>
 <script>
 const FILENAME = "05-outbounds.json";
 let currentOutbounds = [];
@@ -117,7 +119,7 @@ function ensureDirectOutbound() {
   if (prevEmpty && currentOutbounds.length > 0) {
     currentOutbounds[0].tag = "proxy";
     if (!currentOutbounds.some(ob => ob.type === 'direct')) {
-      currentOutbounds.push({ type: 'direct', tag: 'direct' });
+      currentOutbounds.push(makeSingboxDirect());
     }
   }
   prevEmpty = currentOutbounds.length === 0;
@@ -153,39 +155,8 @@ function parseUri() {
 }
 
 function parseSingleUri(uri, index) {
-  const regex = /^anytls:\/\/([^@]+)@([^:?#]+):(\d+)(?:\?([^#]*))?(?:#(.*))?$/;
-  const m = uri.match(regex);
-  if (!m) throw new Error("URI 格式不正确");
-
-  const password = m[1];
-  const server = m[2];
-  const port = parseInt(m[3]);
-  const params = m[4] || "";
-  const name = m[5] ? decodeURIComponent(m[5]) : ("anytls-out-" + index);
-
-  let insecure = false;
-  if (params) {
-    const pairs = params.split("&");
-    for (const pair of pairs) {
-      const [k, v] = pair.split("=");
-      if (k === "allowInsecure" && v === "1") insecure = true;
-    }
-  }
-
-  const ob = {
-    type: "anytls",
-    tag: name,
-    server: server,
-    server_port: port,
-    password: password,
-    tls: {
-      enabled: true,
-      server_name: server
-    }
-  };
-
-  if (insecure) ob.tls.insecure = true;
-
+  const ob = parseSingboxUri(uri);
+  if (!ob.tag || ob.tag === "proxy") ob.tag = "anytls-out-" + index;
   return ob;
 }
 
@@ -289,8 +260,13 @@ function syncFormToJson() {
 
 // 从 outbounds 同步到 JSON 编辑器
 function syncJsonFromOutbounds() {
-  const config = { outbounds: currentOutbounds };
-  document.getElementById("editor").value = JSON.stringify(config, null, 2);
+  // Separate node outbounds and direct outbounds
+  const nodeObs = currentOutbounds.filter(ob => ob.type !== 'direct');
+  if (nodeObs.length === 0) {
+    document.getElementById("editor").value = JSON.stringify({ outbounds: [] }, null, 2);
+    return;
+  }
+  document.getElementById("editor").value = generateSingboxConfig(nodeObs);
 }
 
 // 从 JSON 编辑器同步到 outbounds
@@ -330,6 +306,5 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 });
 </script>
-<script src="./common.js"></script>
 </body>
 </html>

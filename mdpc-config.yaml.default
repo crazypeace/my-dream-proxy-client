@@ -1,10 +1,23 @@
 listen: 127.0.0.1
 port: 18080
-files-dir: bin/xray/
-core-start: "bin/xray/xray run -confdir bin/xray/"
-core-test: "bin/xray/xray run -confdir bin/xray/ -test"
-# win环境需要用\\
-# files-dir: bin\\xray\\
-# core-start: "bin\\xray\\xray.exe run -confdir bin\\xray\\"
-# core-test: "bin\\xray\\xray.exe run -confdir bin\\xray\\ -test"
 log: ""
+
+xray:
+    files-dir: "bin/xray/"
+    core-start: "bin/xray/xray run -confdir bin/xray/"
+    core-test: "bin/xray/xray run -confdir bin/xray/ -test"
+
+hy2:
+    files-dir: "bin/hy2/"
+    core-start: "bin/hy2/hysteria client -c bin/hy2/config.yaml"
+    core-test: ""
+
+sing-box:
+    files-dir: "bin/sing-box/"
+    core-start: "bin/sing-box/sing-box run -C bin/sing-box/"
+    core-test: "bin/sing-box/sing-box check -C bin/sing-box/"
+
+mdpc:
+    files-dir: ""
+    core-start: ""
+    core-test: ""

@@ -11,6 +11,12 @@ import (
 	"syscall"
 )
 
+// App holds global state: config and per-core process managers.
+type App struct {
+	Config *Config
+	PMs    map[string]*ProcessManager
+}
+
 func main() {
 	cfg := LoadConfig()
 
@@ -24,44 +30,55 @@ func main() {
 		log.SetOutput(f)
 	}
 
-	// Ensure confdir exists
-	if err := os.MkdirAll(cfg.FilesDir, 0755); err != nil {
-		log.Fatalf("failed to create confdir: %v", err)
+	// Ensure confdir exists for each core, log resolved paths
+	for name, core := range cfg.Cores {
+		if core.FilesDir != "" {
+			if err := os.MkdirAll(core.FilesDir, 0755); err != nil {
+				log.Fatalf("failed to create confdir for %s: %v", name, err)
+			}
+		}
+		absFilesDir, _ := filepath.Abs(core.FilesDir)
+		log.Printf("[%s] files-dir:  %s", name, absFilesDir)
+		log.Printf("[%s] core-start: %s", name, core.CoreStart)
+		log.Printf("[%s] core-test:  %s", name, core.CoreTest)
 	}
 
-	// Log resolved paths
-	absFilesDir, _ := filepath.Abs(cfg.FilesDir)
-	log.Printf("files-dir: %s", absFilesDir)
-	log.Printf("core-start: %s", cfg.CoreStart)
-	log.Printf("core-test:  %s", cfg.CoreTest)
+	// Create process managers for each core
+	app := &App{
+		Config: cfg,
+		PMs:    make(map[string]*ProcessManager),
+	}
+	for name := range cfg.Cores {
+		app.PMs[name] = NewProcessManager()
+	}
 
-	// Create process manager
-	pm := NewProcessManager()
-
-	// Clean up core process on exit
+	// Clean up all core processes on exit
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Println("shutting down, stopping core...")
-		pm.Cleanup()
+		log.Println("shutting down, stopping all cores...")
+		for name, pm := range app.PMs {
+			log.Printf("stopping %s...", name)
+			pm.Cleanup()
+		}
 		os.Exit(0)
 	}()
 
 	// Setup routes
 	mux := http.NewServeMux()
 
-	// File operations
-	mux.HandleFunc("GET /api/files", handleListFiles(cfg.FilesDir))
-	mux.HandleFunc("GET /api/files/{filename}", handleReadFile(cfg.FilesDir))
-	mux.HandleFunc("PUT /api/files/{filename}", handleWriteFile(cfg.FilesDir))
-	mux.HandleFunc("DELETE /api/files/{filename}", handleDeleteFile(cfg.FilesDir))
+	// File operations — /api/{core}/files
+	mux.HandleFunc("GET /api/{core}/files", handleListFiles(app))
+	mux.HandleFunc("GET /api/{core}/files/{filename}", handleReadFile(app))
+	mux.HandleFunc("PUT /api/{core}/files/{filename}", handleWriteFile(app))
+	mux.HandleFunc("DELETE /api/{core}/files/{filename}", handleDeleteFile(app))
 
-	// Process operations
-	mux.HandleFunc("GET /api/core/status", handleStatus(pm))
-	mux.HandleFunc("POST /api/core/start", handleStart(pm, cfg))
-	mux.HandleFunc("POST /api/core/stop", handleStop(pm))
-	mux.HandleFunc("POST /api/core/test", handleTest(pm, cfg))
+	// Process operations — /api/{core}/core
+	mux.HandleFunc("GET /api/{core}/core/status", handleStatus(app))
+	mux.HandleFunc("POST /api/{core}/core/start", handleStart(app))
+	mux.HandleFunc("POST /api/{core}/core/stop", handleStop(app))
+	mux.HandleFunc("POST /api/{core}/core/test", handleTest(app))
 
 	// Start server
 	addr := net.JoinHostPort(cfg.Bind, cfg.Port)
@@ -70,6 +87,32 @@ func main() {
 	if err := http.ListenAndServe(addr, corsMiddleware(mux)); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+// StartExclusive starts the named core, stopping any other running core first.
+// Only one core may run at a time.
+func (app *App) StartExclusive(coreName string) error {
+	core, ok := app.Config.Cores[coreName]
+	if !ok {
+		return fmt.Errorf("core not found: %s", coreName)
+	}
+	pm, ok := app.PMs[coreName]
+	if !ok {
+		return fmt.Errorf("process manager not found: %s", coreName)
+	}
+
+	// Stop any other running core
+	for name, otherPM := range app.PMs {
+		if name == coreName {
+			continue
+		}
+		if otherPM.Status().Running {
+			log.Printf("stopping %s to start %s", name, coreName)
+			otherPM.Stop()
+		}
+	}
+
+	return pm.Start(core.CoreStart)
 }
 
 func corsMiddleware(next http.Handler) http.Handler {
