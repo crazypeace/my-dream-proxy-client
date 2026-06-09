@@ -482,3 +482,190 @@ my-dream-proxy-client listening on 127.0.0.1:18280
    - **HTTP 代理：** `127.0.0.1:10809`
     
 </details>
+
+# My Dream Proxy Client (MDPC) 使用说明 (多内核 单outbound)
+
+<details>
+    <summary>点击展开</summary>
+
+## 1. 下载
+
+前往 [Release 页面](https://github.com/crazypeace/my-dream-proxy-client/releases/latest)，下载对应平台的 zip：
+
+| 平台 | 文件名 |
+|---|---|
+| Windows x64 | `my-dream-proxy-client-windows-amd64.zip` |
+| Linux x64 | `my-dream-proxy-client-linux-amd64.zip` |
+| Linux ARM64 | `my-dream-proxy-client-linux-arm64.zip` |
+
+## 2. 解压
+
+解压后目录结构：
+
+```
+my-dream-proxy-client/          ← 解压后的文件夹
+├── my-dream-proxy-client       ← 主程序 (Windows 下是 .exe)
+├── mdpc-config.yaml.default    ← 配置模板
+├── bin/
+│   ├── xray/                   ← 放 xray 二进制和配置
+│   ├── hy2/                    ← 放 hysteria2 二进制和配置
+│   └── sing-box/               ← 放 sing-box 二进制和配置
+└── web/
+    ├── xray/                   ← xray 前端页面
+    ├── hy2/                    ← hy2 前端页面
+    ├── sing-box/               ← sing-box 前端页面
+    └── mdpc/                   ← MDPC 统一管理前端页面
+```
+
+## 3. 准备内核二进制
+
+把翻墙内核的可执行文件放到对应目录：
+
+**Xray**
+
+前往 [Xray-core Releases](https://github.com/XTLS/Xray-core/releases) 下载对应平台的 Xray 二进制文件  
+
+```
+bin/xray/xray          ← xray 可执行文件
+bin/xray/              ← xray 会在这里读写配置文件 (04-inbounds.json, 05-outbounds.json 等)
+```
+
+**Hysteria2**
+
+前往 [Hysteria Releases](https://github.com/apernet/hysteria/releases) 下载对应平台的 Hysteria 二进制文件
+
+```
+bin/hy2/hysteria        ← hysteria 可执行文件
+bin/hy2/               ← hy2 会在这里读写 config.yaml
+```
+
+**sing-box**
+
+从 [Sing-box Releases](https://github.com/crazypeace/my-dream-proxy-client/releases) 页面下载对应平台的 sing-box 二进制文件
+
+```
+bin/sing-box/sing-box   ← sing-box 可执行文件
+bin/sing-box/           ← sing-box 会在这里读写配置文件
+```
+
+> 💡 不需要的内核可以不放
+
+## 4. 创建配置文件
+
+```bash
+cp mdpc-config.yaml.default mdpc-config.yaml
+```
+
+编辑 `mdpc-config.yaml`：
+
+```yaml
+listen: 127.0.0.1
+port: 18080
+log: ""
+
+xray:
+    files-dir: "bin/xray/"
+    core-start: "bin/xray/xray run -confdir bin/xray/"
+    core-test: "bin/xray/xray run -confdir bin/xray/ -test"
+
+hy2:
+    files-dir: "bin/hy2/"
+    core-start: "bin/hy2/hysteria client -c bin/hy2/config.yaml"
+    core-test: ""
+
+sing-box:
+    files-dir: "bin/sing-box/"
+    core-start: "bin/sing-box/sing-box run -C bin/sing-box/"
+    core-test: "bin/sing-box/sing-box check -C bin/sing-box/"
+
+mdpc:
+    files-dir: ""
+```
+
+> `listen` 和 `port` 是 MDPC 后端监听地址。  
+> `core-start` 是启动命令  
+> `core-test` 是测试配置命令（可留空）
+
+## 5. 启动 MDPC 后端
+
+```bash
+# Linux
+chmod +x my-dream-proxy-client
+./my-dream-proxy-client
+
+# Windows
+my-dream-proxy-client.exe
+```
+
+终端会显示：
+```
+[xray] files-dir:  .../bin/xray
+[hy2] files-dir:  .../bin/hy2
+[sing-box] files-dir:  .../bin/sing-box
+my-dream-proxy-client listening on 127.0.0.1:18080
+```
+
+## 6. 启动 MDPC 前端
+
+可以使用浏览器直接打开HTML文件 `file:///05-outbounds.html`
+
+也可以启动一个本地的HTTP服务, 如 `python -m http.server 8000` 再用浏览器访问 `http://127.0.0.1:8000/05-outbounds.html`
+
+
+## 7. 使用 MDPC 统一管理前端
+
+
+### 7.2 Inbound 页面（端口配置）
+
+打开 `file:///04-inbounds.html`
+
+- 设置 SOCKS 端口和 HTTP 端口
+- 点击「💾 保存 xray 和 sing-box 配置」一键生成两个内核的 inbound 配置
+> 端口设置会保存到浏览器 localStorage，所有页面共享, 在生成 hy2 配置文件时, 会参考 localStorage 中保存的值.
+
+### 7.2 Outbound 页面（节点管理）
+
+打开 `file:///05-outbounds.html`
+
+<img  alt="image" src="https://github.com/user-attachments/assets/bb1183c2-b86a-4efa-a63d-7a00de64c345" />
+
+
+这是 MDPC 的核心页面，统一管理所有的节点。
+
+**添加节点：**
+1. 展开「🔗 URI 输入」区域
+2. 粘贴节点分享链接（支持多个，每行一个）
+3. 点击「➕ 解析并添加」
+
+支持的链接格式：
+- `vless://...` → 自动分配给 xray
+- `hysteria2://...` → 自动分配给 hy2
+- `anytls://...` → 自动分配给 sing-box
+
+
+
+### 7.3 Log / DNS / Route 页面
+
+目前这些是占位页面，可以通过页面上的链接跳转到各内核的独立前端进行详细配置。
+
+## 8. 启动翻墙内核
+1. 在 outbound 列表中, 选中要使用的节点
+2. 点击 页面顶部的「▶ 启动」
+3. MDPC 会自动：
+   - 生成该内核的配置文件
+   - 通过 API 写入到对应目录
+   - 启动对应的内核
+> 同一时间, 只有1个内核 1个节点 生效
+
+状态指示器变为 "运行中 (pid XXXX)" 即表示成功
+
+
+## 9. 本地代理端口
+
+SOCKS 端口和 HTTP 端口 数据在所有页面之间共享（通过浏览器 localStorage）：
+
+- 在任意 inbound 页面修改端口 → 其他页面自动同步
+- MDPC outbound 页面启动 hy2 时会自动读取这些端口
+- 默认值：SOCKS=10808, HTTP=10809
+
+</details>
