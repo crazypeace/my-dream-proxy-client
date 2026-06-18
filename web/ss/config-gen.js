@@ -149,11 +149,13 @@ function generateSsConfig(outbound, socksPort, httpPort) {
     server_port: outbound.server_port,
     password: outbound.password,
     method: outbound.method,
+    mode: "tcp_and_udp",
     locals: [
       {
         protocol: "socks",
         local_address: "127.0.0.1",
-        local_port: parseInt(socksPort) || 10808
+        local_port: parseInt(socksPort) || 10808,
+        mode: "tcp_and_udp"
       },
       {
         protocol: "http",
@@ -179,7 +181,7 @@ function generateSsInbound() {
   var httpPort = parseInt(localStorage.getItem("http-port")) || 10809;
   return {
     locals: [
-      { protocol: "socks", local_address: "127.0.0.1", local_port: socksPort },
+      { protocol: "socks", local_address: "127.0.0.1", local_port: socksPort, mode: "tcp_and_udp" },
       { protocol: "http",  local_address: "127.0.0.1", local_port: httpPort }
     ]
   };
