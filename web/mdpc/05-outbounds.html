@@ -154,12 +154,11 @@ function parseUriString(uri) {
   uri = uri.trim();
   if (!uri) return null;
 
-  const regex = /^(\w+):\/\/([^@]*)@([^:?#]+):(\d+)(?:\?([^#]*))?(?:#(.*))?$/;
-  const m = uri.match(regex);
-  if (!m) return null;
+  var parts = URI.parse(uri);
+  if (!parts.scheme || !parts.host) return null;
 
-  const protocol = m[1];
-  const tag = m[6] ? decodeURIComponent(m[6]) : (protocol + "-" + m[3]);
+  const protocol = parts.scheme;
+  const tag = parts.fragment ? decodeURIComponent(parts.fragment) : (protocol + "-" + parts.host);
   const core = PROTOCOL_CORE_MAP[protocol];
   if (!core) return null; // unsupported protocol
 

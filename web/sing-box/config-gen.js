@@ -1,27 +1,30 @@
 // sing-box config functions — URI parsing, direct outbound, config generation
+// Requires: URI.parse() from uri-js (loaded by HTML page)
 
 // Parse a raw anytls:// URI → sing-box outbound object
 function parseSingboxUri(raw) {
   var uri = raw.trim();
-  var regex = /^anytls:\/\/([^@]+)@([^:?#]+):(\d+)(?:\?([^#]*))?(?:#(.*))?$/;
-  var m = uri.match(regex);
-  if (!m) throw new Error("URI 格式不正确: " + uri.substring(0, 40));
+  var parts = URI.parse(uri);
+  if (!parts.host || !parts.port) throw new Error("URI 格式不正确: " + uri.substring(0, 40));
 
-  var password = m[1];
-  var server = m[2];
-  var port = parseInt(m[3]);
-  var params = m[4] || "";
-  var name = m[5] ? decodeURIComponent(m[5]) : "proxy";
-
-  var insecure = false;
-  var sni = server;
-  if (params) {
-    params.split("&").forEach(function(pair) {
-      var kv = pair.split("=");
-      if (kv[0] === "allowInsecure" && kv[1] === "1") insecure = true;
-      if (kv[0] === "sni" && kv[1]) sni = decodeURIComponent(kv[1]);
+  var params = {};
+  if (parts.query) {
+    parts.query.split("&").forEach(function(pair) {
+      var eqIdx = pair.indexOf("=");
+      if (eqIdx >= 0) {
+        params[decodeURIComponent(pair.substring(0, eqIdx))] = decodeURIComponent(pair.substring(eqIdx + 1));
+      } else if (pair) {
+        params[decodeURIComponent(pair)] = "";
+      }
     });
   }
+
+  var password = parts.userinfo ? decodeURIComponent(parts.userinfo) : "";
+  var server = parts.host;
+  var port = parseInt(parts.port);
+  var name = parts.fragment ? decodeURIComponent(parts.fragment) : "proxy";
+  var sni = params.sni || server;
+  var insecure = (params.allowInsecure === "1" || params.insecure === "1");
 
   var ob = {
     type: "anytls",
