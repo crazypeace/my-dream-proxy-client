@@ -29,3 +29,5 @@ bin/core/
 
 # md
 *.md
+mdpc-linux-arm64
+mdpc-windows-amd64.exe
