@@ -3,6 +3,8 @@ my-dream-proxy-client
 my-dream-proxy-client.exe
 mdpc
 mdpc.exe
+mdpc-linux-arm64
+mdpc-windows-amd64.exe
 
 # Everything in bin/xray/ except the placeholder
 bin/xray/*
@@ -29,5 +31,3 @@ bin/core/
 
 # md
 *.md
-mdpc-linux-arm64
-mdpc-windows-amd64.exe
