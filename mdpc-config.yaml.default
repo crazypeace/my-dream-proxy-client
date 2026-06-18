@@ -17,6 +17,11 @@ sing-box:
     core-start: "bin/sing-box/sing-box run -C bin/sing-box/"
     core-test: "bin/sing-box/sing-box check -C bin/sing-box/"
 
+ss:
+    files-dir: "bin/ss/"
+    core-start: "bin/ss/sslocal -c bin/ss/local.json"
+    core-test: ""
+
 mdpc:
     files-dir: ""
     core-start: ""

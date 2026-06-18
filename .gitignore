@@ -16,6 +16,10 @@ bin/hy2/*
 bin/sing-box/*
 !bin/sing-box/put_sing-box_bin_config_here
 
+# Everything in bin/ss/ except the placeholder
+bin/ss/*
+!bin/ss/put_ss_bin_config_here
+
 # User-specific config
 *.yaml
 

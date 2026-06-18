@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>local.json - Shadowsocks</title>
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/uri-js@4.4.1/dist/es5/uri.all.min.js"></script>
+<link rel="stylesheet" href="./common.css">
+<style>
+/* Collapsible sections */
+.section { margin-bottom: 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff; overflow: hidden; }
+.section-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; user-select: none; background: #fafafa; border-bottom: 1px solid #eee; font-weight: 500; font-size: 15px; }
+.section-header:hover { background: #f0f0f0; }
+.section-header .arrow { margin-right: 8px; font-size: 12px; transition: transform 0.2s; }
+.section-header .arrow.open { transform: rotate(90deg); }
+.section-body { padding: 16px; display: none; }
+.section-body.open { display: block; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px 12px; align-items: center; }
+.form-grid label { font-size: 14px; color: #555; text-align: right; }
+.form-grid input, .form-grid select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; }
+.form-grid input:focus, .form-grid select:focus { outline: none; border-color: #1976d2; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">Shadowsocks</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>local.json</h2>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+
+  <!-- URI parser -->
+  <div class="section" id="uriSection">
+    <div class="section-header" onclick="toggleSection('uri')">
+      <span class="arrow open" id="uriArrow">▶</span> 节点链接解析
+    </div>
+    <div class="section-body open" id="uriBody">
+      <p style="font-size:13px;color:#666;margin-bottom:8px;">粘贴 ss:// SIP002 格式链接</p>
+      <div style="display: flex; gap: 8px;">
+        <input id="shareLink" placeholder="ss://base64(method:password)@server:port#name" style="flex:1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace;">
+        <button class="btn-primary" onclick="parseShareLink()">解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form section -->
+  <div class="section" id="formSection">
+    <div class="section-header" onclick="toggleSection('form')">
+      <span class="arrow open" id="formArrow">▶</span> 表单
+    </div>
+    <div class="section-body open" id="formBody">
+      <div class="form-grid">
+        <label>地址:</label>
+        <input id="f_host" placeholder="服务器 IP 或域名">
+        <label>端口:</label>
+        <input id="f_port" type="number" value="8388">
+        <label>加密方法:</label>
+        <select id="f_method">
+          <option value="2022-blake3-aes-256-gcm">2022-blake3-aes-256-gcm (推荐)</option>
+          <option value="2022-blake3-aes-128-gcm">2022-blake3-aes-128-gcm</option>
+          <option value="2022-blake3-chacha20-poly1305">2022-blake3-chacha20-poly1305</option>
+          <option value="aes-256-gcm">aes-256-gcm</option>
+          <option value="aes-128-gcm">aes-128-gcm</option>
+          <option value="chacha20-ietf-poly1305">chacha20-ietf-poly1305</option>
+        </select>
+        <label>密码:</label>
+        <input id="f_password" placeholder="密码 (AEAD-2022 为 base64 密钥)">
+        <label>插件:</label>
+        <input id="f_plugin" placeholder="(可选) SIP003 插件名，如 v2ray-plugin">
+        <label>插件参数:</label>
+        <input id="f_plugin_opts" placeholder="(可选) 插件参数，如 server;tls;host=example.com">
+        <label>SOCKS 端口:</label>
+        <input id="f_socksPort" type="number" value="10808">
+        <label>HTTP 端口:</label>
+        <input id="f_httpPort" type="number" value="10809">
+      </div>
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="btn-primary" onclick="formToJson()">转JSON</button>
+        <button class="btn-primary" onclick="directSave()">直接保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON section (collapsed) -->
+  <div class="section" id="jsonSection">
+    <div class="section-header" onclick="toggleSection('json')">
+      <span class="arrow" id="jsonArrow">▶</span> JSON
+    </div>
+    <div class="section-body" id="jsonBody">
+      <textarea class="editor" id="editor" placeholder="点击「转JSON」生成，或点击「读取配置」加载..."></textarea>
+      <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="btn-primary" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>const FILENAME = "local.json";</script>
+<script src="./common.js"></script>
+<script src="./config-gen.js"></script>
+<script>
+function toggleSection(name) {
+  const body = document.getElementById(name + "Body");
+  const arrow = document.getElementById(name + "Arrow");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+// --- Port localStorage ---
+const socksEl = document.getElementById("f_socksPort");
+const httpEl = document.getElementById("f_httpPort");
+socksEl.value = localStorage.getItem("socks-port") || "10808";
+httpEl.value = localStorage.getItem("http-port") || "10809";
+socksEl.addEventListener("input", () => localStorage.setItem("socks-port", socksEl.value));
+httpEl.addEventListener("input", () => localStorage.setItem("http-port", httpEl.value));
+
+// --- Form <-> JSON ---
+
+function gatherForm() {
+  return {
+    host: document.getElementById("f_host").value.trim(),
+    port: parseInt(document.getElementById("f_port").value) || 8388,
+    method: document.getElementById("f_method").value,
+    password: document.getElementById("f_password").value.trim(),
+    plugin: document.getElementById("f_plugin").value.trim(),
+    plugin_opts: document.getElementById("f_plugin_opts").value.trim(),
+    socksPort: document.getElementById("f_socksPort").value.trim() || "10808",
+    httpPort: document.getElementById("f_httpPort").value.trim() || "10809"
+  };
+}
+
+function fillForm(obj) {
+  document.getElementById("f_host").value = obj.host || "";
+  document.getElementById("f_port").value = obj.port || 8388;
+  document.getElementById("f_method").value = obj.method || "2022-blake3-aes-256-gcm";
+  document.getElementById("f_password").value = obj.password || "";
+  document.getElementById("f_plugin").value = obj.plugin || "";
+  document.getElementById("f_plugin_opts").value = obj.plugin_opts || "";
+  document.getElementById("f_socksPort").value = obj.socksPort || "10808";
+  document.getElementById("f_httpPort").value = obj.httpPort || "10809";
+}
+
+function formToJson() {
+  const f = gatherForm();
+  // Build an outbound object from form fields
+  const outbound = {
+    server: f.host,
+    server_port: f.port,
+    method: f.method,
+    password: f.password,
+    plugin: f.plugin,
+    plugin_opts: f.plugin_opts
+  };
+  const content = generateSsConfig(outbound, f.socksPort, f.httpPort);
+  document.getElementById("editor").value = content;
+  // Expand JSON section
+  const body = document.getElementById("jsonBody");
+  const arrow = document.getElementById("jsonArrow");
+  if (!body.classList.contains("open")) {
+    body.classList.add("open");
+    arrow.classList.add("open");
+  }
+  showMsg("JSON 已生成", true);
+}
+
+// Parse JSON back into form
+function parseJsonToForm(jsonStr) {
+  try {
+    const config = JSON.parse(jsonStr);
+    if (!config || !config.server) return false;
+
+    // Extract ports from locals or top-level
+    let socksPort = "10808", httpPort = "10809";
+    if (config.locals && Array.isArray(config.locals)) {
+      config.locals.forEach(function(loc) {
+        if (loc.protocol === "socks") socksPort = String(loc.local_port);
+        if (loc.protocol === "http") httpPort = String(loc.local_port);
+      });
+    } else {
+      if (config.local_port) socksPort = String(config.local_port);
+    }
+
+    fillForm({
+      host: config.server || "",
+      port: config.server_port || 8388,
+      method: config.method || "2022-blake3-aes-256-gcm",
+      password: config.password || "",
+      plugin: config.plugin || "",
+      plugin_opts: config.plugin_opts || "",
+      socksPort: socksPort,
+      httpPort: httpPort
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// --- URI parser ---
+
+function parseShareLink() {
+  const raw = document.getElementById("shareLink").value.trim();
+  if (!raw) { showMsg("请输入 ss:// 链接", false); return; }
+
+  try {
+    const ob = parseSsUri(raw);
+    fillForm({
+      host: ob.server,
+      port: ob.server_port,
+      method: ob.method,
+      password: ob.password,
+      plugin: ob.plugin || "",
+      plugin_opts: ob.plugin_opts || "",
+      socksPort: document.getElementById("f_socksPort").value || "10808",
+      httpPort: document.getElementById("f_httpPort").value || "10809"
+    });
+    showMsg("链接已解析" + (ob.tag ? " (" + ob.tag + ")" : ""), true);
+  } catch (e) {
+    showMsg("链接解析失败: " + e.message, false);
+  }
+}
+
+// --- Override readConfig to also fill form ---
+
+async function readConfig() {
+  try {
+    const res = await fetch(api("/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    const content = data.data.content;
+    document.getElementById("editor").value = content;
+    parseJsonToForm(content);
+    showMsg("配置已加载", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function directSave() {
+  formToJson();
+  await saveConfig();
+}
+</script>
+</body>
+</html>
