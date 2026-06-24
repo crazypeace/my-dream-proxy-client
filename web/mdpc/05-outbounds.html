@@ -154,6 +154,27 @@ const FILENAME = "mdpc-outbounds.yaml";
 let currentOutbounds = []; // [{core, uri, tag, protocol}]
 let selectedIndex = -1;
 
+// ── localStorage 持久化 selectedIndex（按 URI 追踪） ──
+const LS_KEY_SELECTED_URI = "mdpc-selected-uri";
+
+function saveSelectedUri() {
+  const uri = (selectedIndex >= 0 && selectedIndex < currentOutbounds.length)
+    ? currentOutbounds[selectedIndex].uri
+    : null;
+  if (uri) {
+    localStorage.setItem(LS_KEY_SELECTED_URI, uri);
+  } else {
+    localStorage.removeItem(LS_KEY_SELECTED_URI);
+  }
+}
+
+function loadSelectedIndex() {
+  const saved = localStorage.getItem(LS_KEY_SELECTED_URI);
+  if (!saved) return -1;
+  const idx = currentOutbounds.findIndex(o => o.uri === saved);
+  return idx >= 0 ? idx : -1;
+}
+
 function toggleSection(name) {
   const body = document.getElementById(name + "Body");
   const arrow = document.getElementById(name + "Arrow");
@@ -210,6 +231,7 @@ function parseAndAddUri() {
     renderOutboundList();
     updateFormFromOutbound();
     syncYamlFromOutbounds();
+    saveSelectedUri();
     showMsg("已添加 " + added + " 条 outbound", true);
   }
 }
@@ -337,6 +359,7 @@ function selectOutbound(index) {
   renderOutboundList();
   updateFormFromOutbound();
   updateStatus();
+  saveSelectedUri();
 }
 
 function removeOutbound() {
@@ -350,6 +373,7 @@ function removeOutbound() {
   renderOutboundList();
   updateFormFromOutbound();
   syncYamlFromOutbounds();
+  saveSelectedUri();
   showMsg("已删除", true);
 }
 
@@ -367,10 +391,11 @@ function dedupOutbounds() {
   const removed = before - unique.length;
   if (removed === 0) { showMsg("没有重复节点", true); return; }
   currentOutbounds = unique;
-  if (selectedIndex >= currentOutbounds.length) selectedIndex = currentOutbounds.length - 1;
+  selectedIndex = loadSelectedIndex();
   renderOutboundList();
   updateFormFromOutbound();
   syncYamlFromOutbounds();
+  saveSelectedUri();
   showMsg("已去除 " + removed + " 条重复节点（" + before + " → " + unique.length + "）", true);
 }
 
@@ -448,8 +473,7 @@ function syncOutboundsFromYaml() {
       const uri = typeof item === "string" ? item : (item.uri || "");
       return parseUriString(uri) || { core: "xray", uri: uri, tag: uri, protocol: "?" };
     });
-    if (selectedIndex >= currentOutbounds.length) selectedIndex = currentOutbounds.length - 1;
-    if (selectedIndex < 0 && currentOutbounds.length > 0) selectedIndex = 0;
+    selectedIndex = loadSelectedIndex();
     renderOutboundList();
     updateFormFromOutbound();
     showMsg("已从 YAML 同步 " + currentOutbounds.length + " 条 outbound", true);
