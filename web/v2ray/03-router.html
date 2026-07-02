@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>03-router.json - my-dream-proxy-client</title>
+<link rel="stylesheet" href="./common.css">
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">my-dream-proxy-client</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a class="active" href="03-router.html">03-router</a>
+  <a href="04-inbounds.html">04-inbounds</a>
+  <a href="05-outbounds.html">05-outbounds</a>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>03-router.json</h2>
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+    <button onclick="fillSuggestion()">填充建议</button>
+  </div>
+  <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
+  <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+    <button class="btn-primary" onclick="saveConfig()">保存</button>
+  </div>
+</div>
+
+<script>const FILENAME = "03-router.json"; const SUGGESTION_DATA = {"routing": {"domainStrategy": "IPIfNonMatch", "rules": [{"type": "field", "domain": ["geosite:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:cn"], "outboundTag": "direct"}, {"type": "field", "ip": ["geoip:private"], "outboundTag": "direct"}, {"type": "field", "domain": ["geosite:geolocation-!cn"], "outboundTag": "proxy"}], "final": "proxy"}};</script>
+<script src="./common.js"></script>
+</body>
+</html>

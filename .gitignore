@@ -22,6 +22,10 @@ bin/sing-box/*
 bin/ss/*
 !bin/ss/put_ss_bin_config_here
 
+# Everything in bin/v2ray/ except the placeholder
+bin/v2ray/*
+!bin/v2ray/put_v2ray_bin_config_here
+
 # User-specific config
 *.yaml
 

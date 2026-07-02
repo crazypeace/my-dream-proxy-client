@@ -47,10 +47,12 @@ jobs:
           mkdir -p release/bin/hy2
           mkdir -p release/bin/sing-box
           mkdir -p release/bin/ss
+          mkdir -p release/bin/v2ray
           mkdir -p release/web/xray
           mkdir -p release/web/hy2
           mkdir -p release/web/sing-box
           mkdir -p release/web/ss
+          mkdir -p release/web/v2ray
           mkdir -p release/web/mdpc
           cp my-dream-proxy-client${{ matrix.suffix }} release/
           cp mdpc-config.yaml.default release/
@@ -58,10 +60,12 @@ jobs:
           cp bin/hy2/put_hy2_bin_config_here release/bin/hy2/
           cp bin/sing-box/put_sing-box_bin_config_here release/bin/sing-box/
           cp bin/ss/put_ss_bin_config_here release/bin/ss/
+          cp bin/v2ray/put_v2ray_bin_config_here release/bin/v2ray/
           cp web/xray/*.* release/web/xray/
           cp web/hy2/*.* release/web/hy2/
           cp web/sing-box/*.* release/web/sing-box/
           cp web/ss/*.* release/web/ss/
+          cp web/v2ray/*.* release/web/v2ray/
           cp web/mdpc/*.* release/web/mdpc/
           cd release
           zip -r ../my-dream-proxy-client-${{ matrix.pkg_name }}.zip .

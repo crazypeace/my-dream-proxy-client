@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>04-inbounds.json - my-dream-proxy-client</title>
+<link rel="stylesheet" href="./common.css">
+<style>
+  .port-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+  .port-row label { font-size: 13px; font-weight: 500; min-width: 80px; }
+  .port-row input { width: 100px; padding: 6px 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">my-dream-proxy-client</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a href="03-router.html">03-router</a>
+  <a class="active" href="04-inbounds.html">04-inbounds</a>
+  <a href="05-outbounds.html">05-outbounds</a>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>04-inbounds.json</h2>
+
+  <div class="port-row">
+    <label>SOCKS 端口:</label>
+    <input type="number" id="socksPort" value="10808" onchange="savePorts()">
+    <label>HTTP 端口:</label>
+    <input type="number" id="httpPort" value="10809" onchange="savePorts()">
+  </div>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+    <button onclick="fillSuggestion()">填充建议</button>
+  </div>
+  <textarea class="editor" id="editor" placeholder="点击「读取配置」加载内容，或直接编辑 JSON..."></textarea>
+  <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+    <button class="btn-primary" onclick="saveConfig()">保存</button>
+  </div>
+</div>
+
+<script>const FILENAME = "04-inbounds.json";</script>
+<script src="./common.js"></script>
+<script src="./config-gen.js"></script>
+<script>
+function fillSuggestion() {
+  document.getElementById("editor").value = JSON.stringify(generateV2rayInbound(), null, 2);
+  showMsg("已填充建议内容", true);
+}
+
+function savePorts() {
+  localStorage.setItem("socks-port", document.getElementById("socksPort").value);
+  localStorage.setItem("http-port", document.getElementById("httpPort").value);
+}
+
+// Load saved ports on page load
+(function() {
+  var sp = localStorage.getItem("socks-port");
+  var hp = localStorage.getItem("http-port");
+  if (sp) document.getElementById("socksPort").value = sp;
+  if (hp) document.getElementById("httpPort").value = hp;
+})();
+</script>
+</body>
+</html>

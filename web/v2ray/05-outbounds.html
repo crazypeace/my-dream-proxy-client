@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>05-outbounds.json - my-dream-proxy-client</title>
+<link rel="stylesheet" href="./common.css">
+<style>
+.editor { min-height: 300px; }
+
+/* Collapsible sections */
+.section { margin-bottom: 16px; border: 1px solid #ddd; border-radius: 6px; background: #fff; overflow: hidden; }
+.section-header { display: flex; align-items: center; padding: 10px 16px; cursor: pointer; user-select: none; background: #fafafa; border-bottom: 1px solid #eee; font-weight: 500; font-size: 15px; }
+.section-header:hover { background: #f0f0f0; }
+.section-header .arrow { margin-right: 8px; font-size: 12px; transition: transform 0.2s; }
+.section-header .arrow.open { transform: rotate(90deg); }
+.section-body { padding: 16px; display: none; }
+.section-body.open { display: block; }
+
+/* Form */
+.form-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px 12px; align-items: center; }
+.form-grid label { font-size: 14px; color: #555; text-align: right; }
+.form-grid input, .form-grid select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; width: 100%; }
+.form-grid input:focus, .form-grid select:focus { outline: none; border-color: #1976d2; }
+.form-sep { grid-column: 1 / -1; border-top: 1px solid #eee; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="app-name">my-dream-proxy-client</span>
+  <input class="api-url" id="apiUrl" value="http://127.0.0.1:18080">
+  <button onclick="saveApiUrl()" style="padding:5px 10px;font-size:12px;border:1px solid #ccc;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap;">保存LocalStorage</button>
+  <span class="status" id="statusText"></span>
+  <div class="actions">
+    <button class="btn-start" onclick="startCore()">▶ 启动</button>
+    <button class="btn-stop" onclick="stopCore()">■ 停止</button>
+  </div>
+</div>
+
+<div class="navbar">
+  <a href="01-log.html">01-log</a>
+  <a href="02-dns.html">02-dns</a>
+  <a href="03-router.html">03-router</a>
+  <a href="04-inbounds.html">04-inbounds</a>
+  <a class="active" href="05-outbounds.html">05-outbounds</a>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="content">
+  <h2>05-outbounds.json</h2>
+
+  <div class="btn-row">
+    <button onclick="readConfig()">读取配置</button>
+  </div>
+
+  <!-- Share link section (default expanded) -->
+  <div class="section" id="linkSection">
+    <div class="section-header" onclick="toggleSection('link')">
+      <span class="arrow open" id="linkArrow">▶</span> 节点分享链接
+    </div>
+    <div class="section-body open" id="linkBody">
+      <div style="display: flex; gap: 8px;">
+        <input id="shareLink" placeholder="vmess://..." style="flex:1; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; font-family: monospace;">
+        <button class="btn-primary" onclick="parseShareLink()">解析</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form section (default expanded) -->
+  <div class="section" id="formSection">
+    <div class="section-header" onclick="toggleSection('form')">
+      <span class="arrow open" id="formArrow">▶</span> 表单
+    </div>
+    <div class="section-body open" id="formBody">
+      <div class="form-grid">
+        <label>地址:</label>
+        <input id="f_address" placeholder="服务器地址">
+        <label>端口:</label>
+        <input id="f_port" type="number" value="443">
+        <label>UUID:</label>
+        <input id="f_uuid" placeholder="用户 ID">
+        <label>AlterID:</label>
+        <input id="f_alterId" type="number" value="0">
+        <label>加密方式:</label>
+        <select id="f_security">
+          <option value="auto">auto</option>
+          <option value="aes-128-gcm">aes-128-gcm</option>
+          <option value="chacha20-poly1305">chacha20-poly1305</option>
+          <option value="none">none</option>
+          <option value="zero">zero</option>
+        </select>
+        <label>网络:</label>
+        <select id="f_network">
+          <option value="tcp">tcp</option>
+          <option value="ws">ws</option>
+          <option value="kcp">kcp</option>
+          <option value="http">http (h2)</option>
+          <option value="quic">quic</option>
+          <option value="grpc">grpc</option>
+        </select>
+        <label>伪装类型:</label>
+        <input id="f_headerType" value="none" placeholder="none / http / srtp ...">
+
+        <div class="form-sep"></div>
+
+        <label>TLS:</label>
+        <select id="f_tls">
+          <option value="">none</option>
+          <option value="tls">tls</option>
+        </select>
+        <label>SNI:</label>
+        <input id="f_sni" placeholder="服务器名称 (可选)">
+        <label>Host:</label>
+        <input id="f_host" placeholder="伪装域名 / ws Host (可选)">
+        <label>Path:</label>
+        <input id="f_path" placeholder="ws/h2 path 或 grpc serviceName (可选)">
+      </div>
+      <div class="btn-row" style="margin-top: 16px;">
+        <button class="btn-primary" onclick="formToJson()">转JSON</button>
+        <button class="btn-primary" onclick="directSave()">直接保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON section (default collapsed) -->
+  <div class="section" id="jsonSection">
+    <div class="section-header" onclick="toggleSection('json')">
+      <span class="arrow" id="jsonArrow">▶</span> JSON
+    </div>
+    <div class="section-body" id="jsonBody">
+      <textarea class="editor" id="editor" placeholder="点击「转JSON」生成，或点击「读取配置」加载..."></textarea>
+      <div class="btn-row" style="justify-content: flex-end; margin-top: 12px;">
+        <button class="btn-primary" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>const FILENAME = "05-outbounds.json";</script>
+<script src="./common.js"></script>
+<script src="./config-gen.js"></script>
+<script>
+// 05-outbounds page-specific functions (overrides readConfig/saveConfig from common.js)
+
+function toggleSection(name) {
+  const body = document.getElementById(name + "Body");
+  const arrow = document.getElementById(name + "Arrow");
+  body.classList.toggle("open");
+  arrow.classList.toggle("open");
+}
+
+// --- Form <-> JSON ---
+
+function gatherForm() {
+  return {
+    address: document.getElementById("f_address").value,
+    port: parseInt(document.getElementById("f_port").value) || 443,
+    uuid: document.getElementById("f_uuid").value,
+    alterId: parseInt(document.getElementById("f_alterId").value) || 0,
+    security: document.getElementById("f_security").value,
+    network: document.getElementById("f_network").value,
+    headerType: document.getElementById("f_headerType").value,
+    tls: document.getElementById("f_tls").value,
+    sni: document.getElementById("f_sni").value,
+    host: document.getElementById("f_host").value,
+    path: document.getElementById("f_path").value,
+  };
+}
+
+function fillForm(obj) {
+  document.getElementById("f_address").value = obj.address || "";
+  document.getElementById("f_port").value = obj.port || 443;
+  document.getElementById("f_uuid").value = obj.uuid || "";
+  document.getElementById("f_alterId").value = obj.alterId || 0;
+  document.getElementById("f_security").value = obj.security || "auto";
+  document.getElementById("f_network").value = obj.network || "tcp";
+  document.getElementById("f_headerType").value = obj.headerType || "none";
+  document.getElementById("f_tls").value = obj.tls || "";
+  document.getElementById("f_sni").value = obj.sni || "";
+  document.getElementById("f_host").value = obj.host || "";
+  document.getElementById("f_path").value = obj.path || "";
+}
+
+// Build a vmess:// URI (base64 JSON) from form fields
+function formToVmessUri(f) {
+  const j = {
+    v: "2",
+    ps: f.sni || f.address || "vmess",
+    add: f.address,
+    port: String(f.port),
+    id: f.uuid,
+    aid: String(f.alterId),
+    scy: f.security,
+    net: f.network,
+    type: f.headerType || "none",
+    host: f.host,
+    path: f.path,
+    tls: f.tls,
+    sni: f.sni
+  };
+  return "vmess://" + btoa(unescape(encodeURIComponent(JSON.stringify(j))));
+}
+
+function formToJson() {
+  const f = gatherForm();
+  const uri = formToVmessUri(f);
+  const ob = parseVmessUri(uri);
+  const config = JSON.parse(generateV2rayConfig([ob]));
+  document.getElementById("editor").value = JSON.stringify(config, null, 2);
+  // Expand JSON section
+  const body = document.getElementById("jsonBody");
+  const arrow = document.getElementById("jsonArrow");
+  if (!body.classList.contains("open")) {
+    body.classList.add("open");
+    arrow.classList.add("open");
+  }
+  showMsg("JSON 已生成", true);
+}
+
+function parseJsonToForm(jsonStr) {
+  try {
+    const config = JSON.parse(jsonStr);
+    const out = (config.outbounds || []).find(o => o.protocol === "vmess");
+    if (!out) return false;
+    const vnext = out.settings?.vnext?.[0] || {};
+    const user = (vnext.users || [])[0] || {};
+    const ss = out.streamSettings || {};
+    const net = ss.network || "tcp";
+    let host = "", path = "", headerType = "none";
+    if (net === "ws") {
+      path = ss.wsSettings?.path || "";
+      host = ss.wsSettings?.headers?.Host || "";
+    } else if (net === "http") {
+      path = ss.httpSettings?.path || "";
+      host = (ss.httpSettings?.host || []).join(",");
+    } else if (net === "grpc") {
+      path = ss.grpcSettings?.serviceName || "";
+    } else if (net === "kcp") {
+      headerType = ss.kcpSettings?.header?.type || "none";
+      path = ss.kcpSettings?.seed || "";
+    } else if (net === "quic") {
+      host = ss.quicSettings?.security || "";
+      path = ss.quicSettings?.key || "";
+      headerType = ss.quicSettings?.header?.type || "none";
+    } else {
+      headerType = ss.tcpSettings?.header?.type || "none";
+    }
+    fillForm({
+      address: vnext.address || "",
+      port: vnext.port || 443,
+      uuid: user.id || "",
+      alterId: user.alterId || 0,
+      security: user.security || "auto",
+      network: net,
+      headerType: headerType,
+      tls: ss.security === "tls" ? "tls" : "",
+      sni: ss.tlsSettings?.serverName || "",
+      host: host,
+      path: path,
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// --- Share link parser ---
+
+function parseShareLink() {
+  const raw = document.getElementById("shareLink").value.trim();
+  if (!raw) { showMsg("请输入节点分享链接", false); return; }
+
+  try {
+    const ob = parseVmessUri(raw);
+    const vnext = ob.settings?.vnext?.[0] || {};
+    const user = (vnext.users || [])[0] || {};
+    const ss = ob.streamSettings || {};
+    const net = ss.network || "tcp";
+    let host = "", path = "", headerType = "none";
+    if (net === "ws") {
+      path = ss.wsSettings?.path || "";
+      host = ss.wsSettings?.headers?.Host || "";
+    } else if (net === "http") {
+      path = ss.httpSettings?.path || "";
+      host = (ss.httpSettings?.host || []).join(",");
+    } else if (net === "grpc") {
+      path = ss.grpcSettings?.serviceName || "";
+    } else if (net === "kcp") {
+      headerType = ss.kcpSettings?.header?.type || "none";
+      path = ss.kcpSettings?.seed || "";
+    } else if (net === "quic") {
+      host = ss.quicSettings?.security || "";
+      path = ss.quicSettings?.key || "";
+      headerType = ss.quicSettings?.header?.type || "none";
+    } else {
+      headerType = ss.tcpSettings?.header?.type || "none";
+    }
+    fillForm({
+      address: vnext.address || "",
+      port: vnext.port || 443,
+      uuid: user.id || "",
+      alterId: user.alterId || 0,
+      security: user.security || "auto",
+      network: net,
+      headerType: headerType,
+      tls: ss.security === "tls" ? "tls" : "",
+      sni: ss.tlsSettings?.serverName || "",
+      host: host,
+      path: path,
+    });
+    showMsg("链接已解析", true);
+  } catch (e) {
+    showMsg("链接格式错误: " + e.message, false);
+  }
+}
+
+// Override common readConfig to also parse JSON into form
+async function readConfig() {
+  try {
+    const res = await fetch(api("/files/" + FILENAME));
+    const data = await res.json();
+    if (data.error) { showMsg(data.error, false); return; }
+    const content = data.data.content;
+    document.getElementById("editor").value = content;
+    parseJsonToForm(content);
+    showMsg("配置已加载", true);
+  } catch (e) {
+    showMsg("连接后端失败: " + e.message, false);
+  }
+}
+
+async function directSave() {
+  formToJson();
+  await saveConfig();
+}
+</script>
+</body>
+</html>

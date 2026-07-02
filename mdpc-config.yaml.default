@@ -22,6 +22,11 @@ ss:
     core-start: "bin/ss/sslocal -c bin/ss/local.json"
     core-test: ""
 
+v2ray:
+    files-dir: "bin/v2ray/"
+    core-start: "bin/v2ray/v2ray run -d bin/v2ray/"
+    core-test: "bin/v2ray/v2ray test -d bin/v2ray/"
+
 mdpc:
     files-dir: ""
     core-start: ""

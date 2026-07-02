@@ -11,6 +11,7 @@
 <script src="../hy2/config-gen.js?v=2"></script>
 <script src="../sing-box/config-gen.js?v=2"></script>
 <script src="../ss/config-gen.js?v=2"></script>
+<script src="../v2ray/config-gen.js?v=2"></script>
 <style>
   .uri-section { margin-bottom: 16px; padding: 16px; background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 4px; }
   .uri-section textarea { width: 100%; height: 80px; font-family: monospace; font-size: 13px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; resize: vertical; }
@@ -31,6 +32,7 @@
   .core-badge.core-hy2 { background: #388e3c; }
   .core-badge.core-sing-box { background: #7b1fa2; }
   .core-badge.core-ss { background: #e65100; }
+  .core-badge.core-v2ray { background: #c2185b; }
   .outbound-item .proto-tag { color: #888; font-size: 12px; }
   .outbound-item .uri-text { color: #666; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
 
@@ -99,7 +101,7 @@
       <span style="font-weight:500;font-size:15px;">节点链接解析</span>
     </div>
     <div class="section-body open" id="uriBody" style="padding:16px;border:1px solid #e0e0e0;border-top:none;border-radius:0 0 4px 4px;background:#f9f9f9;">
-      <p style="font-size:13px;color:#666;margin-bottom:8px;">每行一个节点链接，支持 anytls:// vless:// hysteria2:// ss://（订阅获取后自动填入，也可手动编辑）</p>
+      <p style="font-size:13px;color:#666;margin-bottom:8px;">每行一个节点链接，支持 anytls:// vless:// vmess:// hysteria2:// ss://（订阅获取后自动填入，也可手动编辑）</p>
       <textarea id="uriInput" placeholder="anytls://password@server:port?allowInsecure=1#name&#10;vless://uuid@server:port?type=tcp&security=tls#name" style="width:100%;height:80px;font-family:monospace;font-size:13px;padding:8px;border:1px solid #ccc;border-radius:4px;resize:vertical;"></textarea>
       <div style="margin-top:8px;display:flex;gap:8px;">
         <button onclick="parseAndAddUri()">➕ 解析并添加</button>
@@ -187,6 +189,7 @@ function toggleSection(name) {
 const PROTOCOL_CORE_MAP = {
   "anytls": "sing-box",
   "vless": "xray",
+  "vmess": "v2ray",
   "hysteria2": "hy2",
   "hysteria": "hy2",
   "hy2": "hy2",
@@ -502,6 +505,10 @@ async function startCore() {
   if (core === "xray") {
     const outbound = parseXrayUri(ob.uri);
     configContent = generateXrayConfig([outbound]);
+    filename = "05-outbounds.json";
+  } else if (core === "v2ray") {
+    const outbound = parseVmessUri(ob.uri);
+    configContent = generateV2rayConfig([outbound]);
     filename = "05-outbounds.json";
   } else if (core === "hy2") {
     const outbound = parseHy2Uri(ob.uri);
