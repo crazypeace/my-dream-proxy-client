@@ -10,6 +10,33 @@ function v2rayB64Decode(str) {
   return decodeURIComponent(escape(atob(s)));
 }
 
+// Detect whether a host string is a literal IP address (IPv4 or IPv6).
+// Used to auto-skip TLS cert verification: IP endpoints almost never have
+// a valid cert matching the connect address.
+function v2rayIsIP(host) {
+  if (!host) return false;
+  host = host.trim();
+  // Strip brackets from bracketed IPv6, e.g. [2001:db8::1]
+  if (host.charAt(0) === "[" && host.charAt(host.length - 1) === "]") {
+    host = host.substring(1, host.length - 1);
+  }
+  // IPv4: four 0-255 octets
+  var ipv4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  var m = host.match(ipv4);
+  if (m) {
+    for (var i = 1; i <= 4; i++) {
+      if (parseInt(m[i], 10) > 255) return false;
+    }
+    return true;
+  }
+  // IPv6: presence of ":" plus only hex/colon chars is a reliable signal
+  // (domains never contain ":"). Covers ::, compressed, and full forms.
+  if (host.indexOf(":") >= 0 && /^[0-9a-fA-F:]+$/.test(host)) {
+    return true;
+  }
+  return false;
+}
+
 // Parse a raw vmess:// URI → v2ray outbound object
 function parseVmessUri(raw) {
   raw = raw.trim();
@@ -39,9 +66,14 @@ function parseVmessUri(raw) {
 
   // TLS settings
   if (security === "tls") {
+    // effectiveSNI follows the fallback chain: sni → host → add.
+    // Auto-skip cert verify when add is an IP, or when the effective SNI
+    // differs from add (forged SNI like example.com on JMS/机场 nodes).
+    var effectiveSNI = obj.sni || obj.host || obj.add;
+    var skipVerify = v2rayIsIP(obj.add) || (effectiveSNI !== obj.add);
     ss.tlsSettings = {
-      serverName: obj.sni || obj.host || obj.add,
-      allowInsecure: false
+      serverName: effectiveSNI,
+      allowInsecure: skipVerify
     };
     if (obj.alpn) ss.tlsSettings.alpn = obj.alpn.split(",").map(function(a){ return a.trim(); }).filter(Boolean);
     if (obj.fp) ss.tlsSettings.fingerprint = obj.fp;
