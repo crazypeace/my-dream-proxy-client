@@ -110,6 +110,11 @@
           <option value="">none</option>
           <option value="tls">tls</option>
         </select>
+        <label>允许不安全:</label>
+        <select id="f_allowInsecure" title="跳过 TLS 证书校验。解析链接时自动判断(SNI与地址不符或地址为IP时开启)，可手动修改">
+          <option value="false">false (校验证书)</option>
+          <option value="true">true (跳过校验)</option>
+        </select>
         <label>SNI:</label>
         <input id="f_sni" placeholder="服务器名称 (可选)">
         <label>Host:</label>
@@ -163,6 +168,7 @@ function gatherForm() {
     network: document.getElementById("f_network").value,
     headerType: document.getElementById("f_headerType").value,
     tls: document.getElementById("f_tls").value,
+    allowInsecure: document.getElementById("f_allowInsecure").value === "true",
     sni: document.getElementById("f_sni").value,
     host: document.getElementById("f_host").value,
     path: document.getElementById("f_path").value,
@@ -178,6 +184,7 @@ function fillForm(obj) {
   document.getElementById("f_network").value = obj.network || "tcp";
   document.getElementById("f_headerType").value = obj.headerType || "none";
   document.getElementById("f_tls").value = obj.tls || "";
+  document.getElementById("f_allowInsecure").value = obj.allowInsecure ? "true" : "false";
   document.getElementById("f_sni").value = obj.sni || "";
   document.getElementById("f_host").value = obj.host || "";
   document.getElementById("f_path").value = obj.path || "";
@@ -207,6 +214,10 @@ function formToJson() {
   const f = gatherForm();
   const uri = formToVmessUri(f);
   const ob = parseVmessUri(uri);
+  // Manual allowInsecure from the form overrides the auto-computed value
+  if (f.tls === "tls" && ob.streamSettings && ob.streamSettings.tlsSettings) {
+    ob.streamSettings.tlsSettings.allowInsecure = f.allowInsecure;
+  }
   const config = JSON.parse(generateV2rayConfig([ob]));
   document.getElementById("editor").value = JSON.stringify(config, null, 2);
   // Expand JSON section
@@ -256,6 +267,7 @@ function parseJsonToForm(jsonStr) {
       network: net,
       headerType: headerType,
       tls: ss.security === "tls" ? "tls" : "",
+      allowInsecure: ss.tlsSettings?.allowInsecure === true,
       sni: ss.tlsSettings?.serverName || "",
       host: host,
       path: path,
@@ -306,6 +318,7 @@ function parseShareLink() {
       network: net,
       headerType: headerType,
       tls: ss.security === "tls" ? "tls" : "",
+      allowInsecure: ss.tlsSettings?.allowInsecure === true,
       sni: ss.tlsSettings?.serverName || "",
       host: host,
       path: path,
