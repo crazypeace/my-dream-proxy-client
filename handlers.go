@@ -165,6 +165,7 @@ func handleStart(app *App) http.HandlerFunc {
 			writeError(w, 500, err.Error())
 			return
 		}
+		writeLastCore(coreName) // persist last-started core
 		writeData(w, app.PMs[coreName].Status())
 	}
 }
@@ -181,6 +182,7 @@ func handleStop(app *App) http.HandlerFunc {
 			writeError(w, 500, err.Error())
 			return
 		}
+		clearLastCore() // user manually stopped → don't auto-restart
 		log.Println("core/stop succeeded")
 		writeData(w, pm.Status())
 	}

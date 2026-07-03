@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 // App holds global state: config and per-core process managers.
@@ -84,6 +85,31 @@ func main() {
 	addr := net.JoinHostPort(cfg.Bind, cfg.Port)
 	log.Printf("listening on %s", addr)
 	fmt.Printf("my-dream-proxy-client listening on %s\n", addr)
+
+	// Auto-start last core (non-blocking, after server is ready)
+	go func() {
+		lastCore := readLastCore()
+		if lastCore == "" {
+			return
+		}
+		if _, ok := cfg.Cores[lastCore]; !ok {
+			log.Printf("[auto-start] skipped: core %q not in config", lastCore)
+			return
+		}
+		log.Printf("[auto-start] starting core: %s", lastCore)
+		if err := app.StartExclusive(lastCore); err != nil {
+			log.Printf("[auto-start] failed: %v", err)
+			return
+		}
+		// Confirm process is actually running after a brief settle
+		time.Sleep(500 * time.Millisecond)
+		if app.PMs[lastCore].Status().Running {
+			log.Printf("[auto-start] confirmed running: %s (pid %d)", lastCore, app.PMs[lastCore].Status().PID)
+		} else {
+			log.Printf("[auto-start] process exited immediately: %s (binary missing?)", lastCore)
+		}
+	}()
+
 	if err := http.ListenAndServe(addr, corsMiddleware(mux)); err != nil {
 		log.Fatalf("server error: %v", err)
 	}

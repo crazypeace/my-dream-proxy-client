@@ -107,3 +107,28 @@ func deleteFile(confdir, filename string) error {
 	}
 	return nil
 }
+
+const lastCoreFile = ".last-core"
+
+// readLastCore returns the name stored in .last-core, or "" if absent/empty.
+func readLastCore() string {
+	data, err := os.ReadFile(lastCoreFile)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// writeLastCore stores the core name in .last-core via atomic write.
+func writeLastCore(name string) error {
+	tmpPath := lastCoreFile + ".tmp"
+	if err := os.WriteFile(tmpPath, []byte(name), 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, lastCoreFile)
+}
+
+// clearLastCore removes .last-core.
+func clearLastCore() {
+	os.Remove(lastCoreFile)
+}
