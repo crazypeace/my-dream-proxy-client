@@ -6,6 +6,7 @@
 <title>inbounds - MDPC</title>
 <link rel="stylesheet" href="./common.css">
 <script src="../xray/config-gen.js?v=2"></script>
+<script src="../v2ray/config-gen.js?v=2"></script>
 <script src="../sing-box/config-gen.js?v=2"></script>
 <style>
   .port-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
@@ -45,11 +46,12 @@
   </div>
 
   <div class="btn-row">
-    <button class="btn-primary" onclick="saveAll()">💾 保存 xray 和 sing-box 配置</button>
+    <button class="btn-primary" onclick="saveAll()">💾 保存 xray / v2ray / sing-box 配置</button>
   </div>
 
   <div class="links">
     <a href="../xray/04-inbounds.html">→ xray inbound 页面</a>
+    <a href="../v2ray/04-inbounds.html">→ v2ray inbound 页面</a>
     <a href="../sing-box/04-inbounds.html">→ sing-box inbound 页面</a>
   </div>
 </div>
@@ -88,6 +90,21 @@ async function saveAll() {
     results.push(r.error ? "xray ❌ " + r.error : "xray ✅");
   } catch (e) {
     results.push("xray ❌ " + e.message);
+  }
+
+  // v2ray
+  try {
+    var data = generateV2rayInbound();
+    var content = JSON.stringify(data, null, 2);
+    var res = await fetch(coreApiUrl("v2ray", "/files/" + FILENAME), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content })
+    });
+    var r = await res.json();
+    results.push(r.error ? "v2ray ❌ " + r.error : "v2ray ✅");
+  } catch (e) {
+    results.push("v2ray ❌ " + e.message);
   }
 
   // sing-box
