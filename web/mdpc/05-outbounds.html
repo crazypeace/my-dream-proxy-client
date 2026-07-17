@@ -156,7 +156,8 @@ const FILENAME = "mdpc-outbounds.yaml";
 let currentOutbounds = []; // [{core, uri, tag, protocol}]
 let selectedIndex = -1;
 
-// ── localStorage 持久化 selectedIndex（按 URI 追踪） ──
+// ── localStorage 持久化「上次点启动时选中的节点」（按 URI 追踪） ──
+// 仅在 startCore() 通过选中校验后写入；点选/添加/删除/去重不写；删除时也不主动清 key（B1）。
 const LS_KEY_SELECTED_URI = "mdpc-selected-uri";
 
 function saveSelectedUri() {
@@ -234,7 +235,6 @@ function parseAndAddUri() {
     renderOutboundList();
     updateFormFromOutbound();
     syncYamlFromOutbounds();
-    saveSelectedUri();
     showMsg("已添加 " + added + " 条 outbound", true);
   }
 }
@@ -362,7 +362,6 @@ function selectOutbound(index) {
   renderOutboundList();
   updateFormFromOutbound();
   updateStatus();
-  saveSelectedUri();
 }
 
 function removeOutbound() {
@@ -376,7 +375,6 @@ function removeOutbound() {
   renderOutboundList();
   updateFormFromOutbound();
   syncYamlFromOutbounds();
-  saveSelectedUri();
   showMsg("已删除", true);
 }
 
@@ -398,7 +396,6 @@ function dedupOutbounds() {
   renderOutboundList();
   updateFormFromOutbound();
   syncYamlFromOutbounds();
-  saveSelectedUri();
   showMsg("已去除 " + removed + " 条重复节点（" + before + " → " + unique.length + "）", true);
 }
 
@@ -497,6 +494,9 @@ async function startCore() {
   if (selectedIndex < 0 || selectedIndex >= currentOutbounds.length) {
     showMsg("请先选择一个 outbound", false); return;
   }
+
+  // A2: 通过选中校验后立刻写入 localStorage（表示用户意图启动的节点）
+  saveSelectedUri();
 
   const ob = currentOutbounds[selectedIndex];
   const core = ob.core;
